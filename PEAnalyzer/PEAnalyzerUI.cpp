@@ -407,7 +407,9 @@ LRESULT MetroWindow::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 {
 	auto hr = Initialize();
 	if (hr != S_OK) {
+		::MessageBoxW(nullptr, L"Initialize() failed", L"Fatal error", MB_OK | MB_ICONSTOP);
 		std::terminate();
+		return S_FALSE;
 	}
 	HICON hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_PEANALYZER));
 	SetIcon(hIcon, TRUE);
