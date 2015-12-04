@@ -2,16 +2,37 @@
 **/
 #include "stdafx.h"
 #include <winnt.h>
+#include <Dbghelp.h>
 #include "PortableExecutableFile.h"
+#pragma comment(lib,"DbgHelp.lib")
 
-class WinFile {
+enum FileMappingStatus {
+	kNotOptions,
+	kCreateFile,
+	kCreateFileMap,
+	kMapViewFile
+};
+
+class WinMapFile {
 private:
-	HANDLE hFile;
+	HANDLE hFile = nullptr;
+	HANDLE hMapFile = nullptr;
+	LPVOID baseAddress = nullptr;
+	int status = kNotOptions;
 public:
-	~WinFile()
+	~WinMapFile()
 	{
-		if (hFile) {
+		switch (status) {
+			case kMapViewFile:
+			UnmapViewOfFile(baseAddress);
+			case kCreateFileMap:
+			CloseHandle(hMapFile);
+			case kCreateFile:
 			CloseHandle(hFile);
+			break;
+			case kNotOptions:
+			default:
+			break;
 		}
 	}
 	bool Open(const std::wstring &path)
@@ -25,7 +46,26 @@ public:
 							NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 			return false;
+		status = kCreateFile;
 		return true;
+	}
+	bool CreateFileMap(const wchar_t *name)
+	{
+		if (status = kCreateFile) {
+			hMapFile = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, name);
+			if (hMapFile == nullptr)
+				return false;
+			status = kCreateFileMap;
+			return true;
+		}
+	}
+	PVOID MapViewOfFile()
+	{
+		baseAddress = ::MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
+		if (baseAddress == nullptr)
+			return nullptr;
+		status = kMapViewFile;
+		return baseAddress;
 	}
 	HANDLE Get()
 	{
@@ -107,6 +147,7 @@ const VALUIE_STRING subsystemTable[] = {
 PortableExecutableFile::PortableExecutableFile(const std::wstring &mPath) :mPath_(mPath)
 {
 	subsystem = subsystemTable[0].str;
+	clrMessage = L"Native Executable File";
 }
 /*
 typedef enum _SID_NAME_USE {
@@ -164,62 +205,73 @@ DWORD   Reserved;       // Additional bitmask to be defined later
 
 bool PortableExecutableFile::Analyzer()
 {
-	WinFile wfile;
-	if (!wfile.Open(mPath_)) {
+	WinMapFile winfile;
+	if (!winfile.Open(mPath_)) {
 		return false;
 	}
-	DWORD bytes_read = 0;
-	IMAGE_DOS_HEADER dos_header;
-	IMAGE_NT_HEADERS nt_header;
-	ReadFile(wfile.Get(), &dos_header, sizeof(dos_header), &bytes_read, NULL);
-	if (bytes_read != sizeof(dos_header)) {
+	LARGE_INTEGER largeFile;
+	if (!GetFileSizeEx(winfile.Get(), &largeFile))
 		return false;
-	}
-	SetFilePointer(wfile.Get(), dos_header.e_lfanew, NULL, FILE_BEGIN);
-	ReadFile(wfile.Get(), &nt_header, sizeof(nt_header), &bytes_read, NULL);
-	if (bytes_read != sizeof(nt_header)) {
+	if (largeFile.QuadPart < sizeof(IMAGE_DOS_HEADER))
 		return false;
-	}
+	if (!winfile.CreateFileMap(L"PEAnalyzer.Executeable.MAP"))
+		return false;
+	char *baseAddress=(char*)winfile.MapViewOfFile();
+	IMAGE_DOS_HEADER *pDOSHeader = reinterpret_cast<IMAGE_DOS_HEADER *>(baseAddress);
+	IMAGE_NT_HEADERS *pNTHeader = reinterpret_cast<IMAGE_NT_HEADERS *>(baseAddress + pDOSHeader->e_lfanew);
+	if (largeFile.QuadPart < sizeof(IMAGE_DOS_HEADER) + pDOSHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS))
+		return false;
 	for (auto &s : signatureTable) {
-		if (s.index == nt_header.Signature) {
+		if (s.index == pNTHeader->Signature) {
 			magicStr = s.str;
 			break;
 		}
 	}
 	for (auto &m : machineTable) {
-		if (m.index == nt_header.FileHeader.Machine) {
+		if (m.index == pNTHeader->FileHeader.Machine) {
 			machine = m.str;
 			break;
 		}
 	}
 	for (auto &sub : subsystemTable) {
-		if (sub.index == nt_header.OptionalHeader.Subsystem) {
+		if (sub.index == pNTHeader->OptionalHeader.Subsystem) {
 			subsystem = sub.str;
 		}
 	}
-	auto var = nt_header.FileHeader.Characteristics;
-	if ((nt_header.FileHeader.Characteristics&IMAGE_FILE_DLL) == IMAGE_FILE_DLL) {
+	auto var = pNTHeader->FileHeader.Characteristics;
+	if ((pNTHeader->FileHeader.Characteristics&IMAGE_FILE_DLL) == IMAGE_FILE_DLL) {
 		mCharacteristics = L"Dynamic Link Library";
-	}else if ((nt_header.FileHeader.Characteristics&IMAGE_FILE_SYSTEM) == IMAGE_FILE_SYSTEM) {
+	} else if ((pNTHeader->FileHeader.Characteristics&IMAGE_FILE_SYSTEM) == IMAGE_FILE_SYSTEM) {
 		mCharacteristics = L"System File";
-	}else if ((nt_header.FileHeader.Characteristics&IMAGE_FILE_EXECUTABLE_IMAGE) == IMAGE_FILE_EXECUTABLE_IMAGE) {
+	} else if ((pNTHeader->FileHeader.Characteristics&IMAGE_FILE_EXECUTABLE_IMAGE) == IMAGE_FILE_EXECUTABLE_IMAGE) {
 		mCharacteristics = L"Executable File";
 	} else {
-		mCharacteristics = std::wstring(L"Characteristics value: ") + std::to_wstring(nt_header.FileHeader.Characteristics);
+		mCharacteristics = std::wstring(L"Characteristics value: ") + std::to_wstring(pNTHeader->FileHeader.Characteristics);
 	}
-
-	wsprintfW(linkVersion, L"%d.%d", 
-			  nt_header.OptionalHeader.MajorLinkerVersion,
-			  nt_header.OptionalHeader.MinorLinkerVersion);
+	wsprintfW(linkVersion, L"%d.%d",
+			  pNTHeader->OptionalHeader.MajorLinkerVersion,
+			  pNTHeader->OptionalHeader.MinorLinkerVersion);
 	wsprintfW(osVersion, L"%d.%d",
-			  nt_header.OptionalHeader.MajorOperatingSystemVersion,
-			  nt_header.OptionalHeader.MinorOperatingSystemVersion);
+			  pNTHeader->OptionalHeader.MajorOperatingSystemVersion,
+			  pNTHeader->OptionalHeader.MinorOperatingSystemVersion);
 	wsprintfW(subsystemVersion, L"%d.%d",
-			  nt_header.OptionalHeader.MajorSubsystemVersion,
-			  nt_header.OptionalHeader.MinorSubsystemVersion);
+			  pNTHeader->OptionalHeader.MajorSubsystemVersion,
+			  pNTHeader->OptionalHeader.MinorSubsystemVersion);
 	wsprintfW(imageVersion, L"%d.%d",
-			  nt_header.OptionalHeader.MajorImageVersion,
-			  nt_header.OptionalHeader.MinorImageVersion);
-	wsprintfW(entryPoint, L"0x%x", nt_header.OptionalHeader.AddressOfEntryPoint);
+			  pNTHeader->OptionalHeader.MajorImageVersion,
+			  pNTHeader->OptionalHeader.MinorImageVersion);
+	wsprintfW(entryPoint, L"0x%x", pNTHeader->OptionalHeader.AddressOfEntryPoint);
+	IMAGE_DATA_DIRECTORY *entry = &(pNTHeader->OptionalHeader).DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER];
+	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
+		return true;
+	}
+	auto va = ImageRvaToVa(pNTHeader, baseAddress, entry->VirtualAddress, 0);
+	if ((char*)va - baseAddress > largeFile.QuadPart)
+		return false;
+	IMAGE_COR20_HEADER *pCLRHeader = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
+	clrMessage = std::wstring(L"CLR: ") +
+		std::to_wstring(pCLRHeader->MajorRuntimeVersion) +
+		std::wstring(L".") +
+		std::to_wstring(pCLRHeader->MajorRuntimeVersion);
 	return true;
 }

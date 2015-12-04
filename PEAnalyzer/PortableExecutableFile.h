@@ -13,6 +13,13 @@
 #define IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG    17 //XBOX Code Catalog
 #endif
 
+typedef enum ReplacesGeneralNumericDefines {
+	// Directory entry macro for CLR data.
+#ifndef IMAGE_DIRECTORY_ENTRY_COMHEADER
+	IMAGE_DIRECTORY_ENTRY_COMHEADER = 14,
+#endif // IMAGE_DIRECTORY_ENTRY_COMHEADER
+} ReplacesGeneralNumericDefines;
+
 class PortableExecutableFile {
 private:
 	std::wstring mPath_;
@@ -20,6 +27,7 @@ private:
 	std::wstring machine;
 	std::wstring subsystem;
 	std::wstring mCharacteristics;
+	std::wstring clrMessage;
 	wchar_t linkVersion[16];
 	wchar_t osVersion[16];
 	wchar_t subsystemVersion[16];
@@ -41,6 +49,10 @@ public:
 	const std::wstring &GetCharacteristics()
 	{
 		return mCharacteristics;
+	}
+	const std::wstring &GetCLRMessage()
+	{
+		return clrMessage;
 	}
 	const wchar_t *GetLinkerVersion()
 	{

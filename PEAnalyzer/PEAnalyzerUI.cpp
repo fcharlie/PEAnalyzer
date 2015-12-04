@@ -560,14 +560,14 @@ LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file)
 	MetroTextItem characteristics = { { 80, 190, 480, 215 }, L"Characteristics: ", portableExecuteFile.GetCharacteristics() };
 	MetroTextItem linkVersion = { { 80, 220, 480, 245 }, L"Linker Version: ", portableExecuteFile.GetLinkerVersion() };
 	MetroTextItem osVersion = { { 80, 250, 480, 275 }, L"OS Version: ", portableExecuteFile.GetOSVersion() };
-	MetroTextItem entryPoint = { { 80,280, 480, 305 }, L"Entry Point: ", portableExecuteFile.GetEntryPoint() };
+	MetroTextItem clrMessage = { { 80, 280, 480, 305 }, L"CLR Metadata: ", portableExecuteFile.GetCLRMessage() };
 	item_.push_back(std::move(signature));
 	item_.push_back(std::move(machine));
 	item_.push_back(std::move(subsystem));
 	item_.push_back(std::move(characteristics));
 	item_.push_back(std::move(linkVersion));
 	item_.push_back(std::move(osVersion));
-	item_.push_back(std::move(entryPoint));
+	item_.push_back(std::move(clrMessage));
 	::InvalidateRect(m_hWnd, nullptr, FALSE);
 	//MessageBox(portableExecuteFile.GetCharacteristics().c_str(), L"This Characteristics", MB_OK);
 	return S_OK;
