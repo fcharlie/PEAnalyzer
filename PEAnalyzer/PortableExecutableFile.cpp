@@ -7,6 +7,12 @@
 #include <codecvt>
 #pragma comment(lib,"DbgHelp.lib")
 
+#ifndef HINST_THISCOMPONENT
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
+#endif
+
+
 enum FileMappingStatus {
 	kNotOptions,
 	kCreateFile,
@@ -256,7 +262,12 @@ bool PortableExecutableFile::Analyzer()
 	wsprintfW(imageVersion, L"%d.%d",
 			  pNTHeader->OptionalHeader.MajorImageVersion,
 			  pNTHeader->OptionalHeader.MinorImageVersion);
-	wsprintfW(entryPoint, L"0x%x", pNTHeader->OptionalHeader.AddressOfEntryPoint);
+	auto self = &__ImageBase;
+	auto selfNTHeader = reinterpret_cast<IMAGE_NT_HEADERS *>((char*)self + self->e_lfanew);
+	if (selfNTHeader->FileHeader.Machine != pNTHeader->FileHeader.Machine) {
+		clrMessage = L"PEAnaylzer's Architecture is different with Input PE File,cannot check CLR";
+		return true;
+	}
 	IMAGE_DATA_DIRECTORY *entry = &(pNTHeader->OptionalHeader).DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER];
 	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
 		return true;

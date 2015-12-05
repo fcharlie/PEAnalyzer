@@ -32,7 +32,6 @@ private:
 	wchar_t osVersion[16];
 	wchar_t subsystemVersion[16];
 	wchar_t imageVersion[16];
-	wchar_t entryPoint[16];
 public:
 	PortableExecutableFile(const std::wstring &mPath);
 	bool Analyzer();
@@ -71,10 +70,6 @@ public:
 	const wchar_t *GetImageVersion()
 	{
 		return imageVersion;
-	}
-	const wchar_t *GetEntryPoint()
-	{
-		return entryPoint;
 	}
 };
 
