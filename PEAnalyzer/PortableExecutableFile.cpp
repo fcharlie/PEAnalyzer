@@ -4,6 +4,7 @@
 #include <winnt.h>
 #include <Dbghelp.h>
 #include "PortableExecutableFile.h"
+#include <codecvt>
 #pragma comment(lib,"DbgHelp.lib")
 
 enum FileMappingStatus {
@@ -83,14 +84,6 @@ public:
 struct VALUIE_STRING {
 	int index;
 	const wchar_t *str;
-};
-
-const  VALUIE_STRING signatureTable[] = {
-	{ IMAGE_DOS_SIGNATURE, L"MZ" },
-	{ IMAGE_OS2_SIGNATURE, L"NE" },
-	{ IMAGE_OS2_SIGNATURE_LE, L"LE" },
-	{ IMAGE_NT_SIGNATURE, L"PE00" },
-	{ 0, L"Unknown " }
 };
 
 const  VALUIE_STRING machineTable[] = {
@@ -216,16 +209,19 @@ bool PortableExecutableFile::Analyzer()
 		return false;
 	if (!winfile.CreateFileMap(L"PEAnalyzer.Executeable.MAP"))
 		return false;
-	char *baseAddress=(char*)winfile.MapViewOfFile();
+	char *baseAddress = (char*)winfile.MapViewOfFile();
 	IMAGE_DOS_HEADER *pDOSHeader = reinterpret_cast<IMAGE_DOS_HEADER *>(baseAddress);
 	IMAGE_NT_HEADERS *pNTHeader = reinterpret_cast<IMAGE_NT_HEADERS *>(baseAddress + pDOSHeader->e_lfanew);
-	if (largeFile.QuadPart < sizeof(IMAGE_DOS_HEADER) + pDOSHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS))
+	if (largeFile.QuadPart < (LONGLONG)(sizeof(IMAGE_DOS_HEADER) + pDOSHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS)))
 		return false;
-	for (auto &s : signatureTable) {
-		if (s.index == pNTHeader->Signature) {
-			magicStr = s.str;
-			break;
-		}
+	union SigMask {
+		DWORD dw;
+		char c[4];
+	};
+	SigMask sigmark;
+	sigmark.dw = pNTHeader->Signature;
+	for (auto &c : sigmark.c) {
+		magicStr.push_back(c);
 	}
 	for (auto &m : machineTable) {
 		if (m.index == pNTHeader->FileHeader.Machine) {
@@ -269,9 +265,11 @@ bool PortableExecutableFile::Analyzer()
 	if ((char*)va - baseAddress > largeFile.QuadPart)
 		return false;
 	IMAGE_COR20_HEADER *pCLRHeader = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
-	clrMessage = std::wstring(L"CLR: ") +
-		std::to_wstring(pCLRHeader->MajorRuntimeVersion) +
-		std::wstring(L".") +
-		std::to_wstring(pCLRHeader->MajorRuntimeVersion);
+	char *pMetaDataAddress = reinterpret_cast<char *>(ImageRvaToVa(pNTHeader, baseAddress, pCLRHeader->MetaData.VirtualAddress, 0));
+	if (pMetaDataAddress - baseAddress > largeFile.QuadPart)
+		return false;
+	char *buildMessage = pMetaDataAddress + 16;
+	std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
+	clrMessage = conv.from_bytes(buildMessage);
 	return true;
 }

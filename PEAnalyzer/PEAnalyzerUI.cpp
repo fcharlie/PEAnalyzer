@@ -324,13 +324,13 @@ HRESULT MetroWindow::OnRender()
 			m_pHwndRenderTarget->DrawTextW(it.name.c_str(),
 										   it.name.size(),
 										   m_pWriteTextFormat,
-										   D2D1::RectF(it.layout.left, it.layout.top, it.layout.left + 120.0f, it.layout.bottom),
+										   D2D1::RectF(it.layout.left, it.layout.top, it.layout.left + 135.0f, it.layout.bottom),
 										   m_pSolidColorBrush,
 										   D2D1_DRAW_TEXT_OPTIONS_NONE, DWRITE_MEASURING_MODE_NATURAL);
 			m_pHwndRenderTarget->DrawTextW(it.value.c_str(),
 										   it.value.size(),
 										   m_pWriteTextFormat,
-										   D2D1::RectF(it.layout.left + 125.0f, it.layout.top, it.layout.right, it.layout.bottom),
+										   D2D1::RectF(it.layout.left + 140.0f, it.layout.top, it.layout.right, it.layout.bottom),
 										   m_pSolidColorBrush,
 										   D2D1_DRAW_TEXT_OPTIONS_NONE, DWRITE_MEASURING_MODE_NATURAL);
 		}
@@ -472,7 +472,7 @@ LRESULT MetroWindow::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHan
 
 LRESULT MetroWindow::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL & bHandled)
 {
-	const LPCWSTR PackageSubffix[] = { L".exe", L".dll", L".com", L".sys",L"scr",L"fon",L"drv" };
+	const LPCWSTR PackageSubffix[] = { L".exe", L".dll", L".com", L".sys", L"scr", L"fon", L"drv" };
 	HDROP hDrop = (HDROP)wParam;
 	UINT nfilecounts = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
 	WCHAR dropfile_name[MAX_PATH];
@@ -560,7 +560,7 @@ LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file)
 	MetroTextItem characteristics = { { 80, 190, 480, 215 }, L"Characteristics: ", portableExecuteFile.GetCharacteristics() };
 	MetroTextItem linkVersion = { { 80, 220, 480, 245 }, L"Linker Version: ", portableExecuteFile.GetLinkerVersion() };
 	MetroTextItem osVersion = { { 80, 250, 480, 275 }, L"OS Version: ", portableExecuteFile.GetOSVersion() };
-	MetroTextItem clrMessage = { { 80, 280, 480, 305 }, L"CLR Metadata: ", portableExecuteFile.GetCLRMessage() };
+	MetroTextItem clrMessage = { { 80, 280, 480, 305 }, L"CLR Information: ", portableExecuteFile.GetCLRMessage() };
 	item_.push_back(std::move(signature));
 	item_.push_back(std::move(machine));
 	item_.push_back(std::move(subsystem));

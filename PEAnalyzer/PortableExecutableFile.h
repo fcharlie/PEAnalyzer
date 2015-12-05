@@ -40,10 +40,12 @@ public:
 	{
 		return magicStr;
 	}
-	const std::wstring &GetMachine(){
+	const std::wstring &GetMachine()
+	{
 		return machine;
 	}
-	const std::wstring &GetSubSystem(){
+	const std::wstring &GetSubSystem()
+	{
 		return subsystem;
 	}
 	const std::wstring &GetCharacteristics()
