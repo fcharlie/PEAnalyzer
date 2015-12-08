@@ -7,7 +7,6 @@
 #define PEANALYZER_UI_H
 
 #include <atlbase.h>
-#include <atlbase.h>
 #include <atlwin.h>
 #include <atlctl.h>
 #include <string>
