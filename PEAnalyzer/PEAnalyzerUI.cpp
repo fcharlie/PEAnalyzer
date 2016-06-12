@@ -164,7 +164,7 @@ MetroWindow::MetroWindow()
 	g_Dpi = new CDPI();
 	g_Dpi->SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 	MetroLabel ml = { { 20, 40, 120, 65 }, L"IMAGE:" };
-	MetroLabel info = { { 80, 345, 480, 370 }, L"\x263B \x2665 Copyright \x0A9 2015.Force Charlie.All Rights Reserved." };
+	MetroLabel info = { { 80, 345, 480, 370 }, L"\x263B \x2665 Copyright \x0A9 2016.Force Charlie.All Rights Reserved." };
 	MetroButton find({ 450, 40, 550, 65 }, L"Find",
 					 std::bind(&MetroWindow::DiscoverIMAGEButtonActive, this, std::placeholders::_1));
 	label_.push_back(std::move(ml));
