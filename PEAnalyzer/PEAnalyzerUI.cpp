@@ -479,8 +479,14 @@ LRESULT MetroWindow::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &
 	std::vector<std::wstring> filelist;
 	for (UINT i = 0; i < nfilecounts; i++) {
 		DragQueryFileW(hDrop, i, dropfile_name, MAX_PATH);
-		if (PathFindSuffixArrayW(dropfile_name, PackageSubffix, ARRAYSIZE(PackageSubffix))) {
-			filelist.push_back(dropfile_name);
+		auto ext=PathFindExtensionW(dropfile_name);
+		if (ext) {
+			for (auto s : PackageSubffix) {
+				if (_wcsicmp(s, ext)) {
+					filelist.push_back(dropfile_name);
+					break;
+				}
+			}
 		}
 		if (!filelist.empty()) {
 			::SetWindowTextW(::GetDlgItem(m_hWnd, IDC_IMAGE_URI_EDIT), filelist[0].c_str());

@@ -5,6 +5,7 @@
 #define PORTABLE_EXECUTABLE_FILE_H
 #include <string>
 
+/// #define PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64   13
 #ifndef IMAGE_FILE_MACHINE_ARM64
 //// IMAGE_FILE_MACHINE_ARM64 is Windows 
 #define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
