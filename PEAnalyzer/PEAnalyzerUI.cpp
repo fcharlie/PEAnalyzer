@@ -152,8 +152,8 @@ MetroWindow::MetroWindow()
   g_Dpi = new CDPI();
   g_Dpi->SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
   MetroLabel ml = {{20, 40, 120, 65}, L"IMAGE:"};
-  MetroLabel info = {{80, 345, 500, 370}, L""};
-  info.text.assign(L"\x263B \x2665 Copyright \x0A9 ")
+  MetroLabel info = {{80, 345, 540, 370}, L""};
+  info.text.assign(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ")
       .append(std::to_wstring(Year()))
       .append(L". Force Charlie. All Rights Reserved.");
 
@@ -279,7 +279,7 @@ HRESULT MetroWindow::OnRender() {
           label.text.c_str(), label.text.size(), m_pWriteTextFormat,
           D2D1::RectF(label.layout.left, label.layout.top, label.layout.right,
                       label.layout.bottom),
-          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_NONE,
+          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
           DWRITE_MEASURING_MODE_NATURAL);
     }
     for (auto &it : item_) {
@@ -289,13 +289,13 @@ HRESULT MetroWindow::OnRender() {
           it.name.c_str(), it.name.size(), m_pWriteTextFormat,
           D2D1::RectF(it.layout.left, it.layout.top, it.layout.left + 135.0f,
                       it.layout.bottom),
-          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_NONE,
+          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
           DWRITE_MEASURING_MODE_NATURAL);
       m_pHwndRenderTarget->DrawTextW(
           it.value.c_str(), it.value.size(), m_pWriteTextFormat,
           D2D1::RectF(it.layout.left + 140.0f, it.layout.top, it.layout.right,
                       it.layout.bottom),
-          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_NONE,
+          m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
           DWRITE_MEASURING_MODE_NATURAL);
     }
     m_pWriteTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
@@ -330,7 +330,7 @@ HRESULT MetroWindow::OnRender() {
             b.caption.c_str(), b.caption.size(), m_pWriteTextFormat,
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
-            m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_NONE,
+            m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
             DWRITE_MEASURING_MODE_NATURAL);
       }
     }
