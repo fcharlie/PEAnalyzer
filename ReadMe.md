@@ -1,4 +1,5 @@
-#PE Analyzer
+# PE Analyzer
+
 On Windows,Executable (image) files are structured according to the Portable Executable (PE) format.  
 
 However, People usually do not know what operating system to run on the PE file directly, 
@@ -8,7 +9,8 @@ Link Version, and OS Version. Entry Point.
 
 ![PE Analyzer](./images/view.png)
 
-##Build
+## Build
+
 Must Visual Studio 2013 or later, C++11 support allow, and ATL header has included.     
 Recommend Visual Studio 2013 Community , or Visual Studio 2015 Community    
 
@@ -22,11 +24,13 @@ Win64:
 
 The features of this program that uses the Direct2D, you need to run on Windows 7 SP1 or later
 
-##Usage
+## Usage
+
 Click 'Find' button,select file, Or Drag File to Edit Control
 
 
-##License
+## License
+
 This tool use MTI License
 
 Copyright &copy; 2015 Force Charlie, All Rights Reserved.    
