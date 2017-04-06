@@ -31,6 +31,6 @@ Click 'Find' button,select file, Or Drag File to Edit Control
 
 ## License
 
-This tool use MTI License
+This tool use MIT License
 
 Copyright &copy; 2017 Force Charlie, All Rights Reserved.    
