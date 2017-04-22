@@ -144,14 +144,14 @@ static inline int Year() {
 }
 
 MetroWindow::MetroWindow()
-    : m_pFactory(nullptr), m_pHwndRenderTarget(nullptr),
-      m_pSolidColorBrush(nullptr), m_PushButtonNActiveBrush(nullptr),
-      m_PushButtonActiveBrush(nullptr), m_PushButtonClickBrush(nullptr),
+    : m_d2dFactory(nullptr), m_pHwndRenderTarget(nullptr),
+      m_pSolidColorBrush(nullptr), m_PushButtonBackgoundBrush(nullptr),
+      m_PushButtonForegroundBrush(nullptr), m_PushButtonClickBrush(nullptr),
       m_pBakcgroundEdgeBrush(nullptr), m_pWriteFactory(nullptr),
       m_pWriteTextFormat(nullptr) {
   g_Dpi = new CDPI();
   g_Dpi->SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-  MetroLabel ml = {{20, 40, 120, 65}, L"IMAGE:"};
+  MetroLabel ml = {{20, 40, 120, 65}, L"PE file:"};
   MetroLabel info = {{80, 345, 540, 370}, L""};
   info.text.assign(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ")
       .append(std::to_wstring(Year()))
@@ -172,14 +172,14 @@ MetroWindow::~MetroWindow() {
   SafeRelease(&m_pWriteFactory);
   SafeRelease(&m_pSolidColorBrush);
 
-  SafeRelease(&m_PushButtonNActiveBrush);
-  SafeRelease(&m_PushButtonActiveBrush);
+  SafeRelease(&m_PushButtonBackgoundBrush);
+  SafeRelease(&m_PushButtonForegroundBrush);
   SafeRelease(&m_PushButtonClickBrush);
 
   SafeRelease(&m_pBakcgroundEdgeBrush);
 
   SafeRelease(&m_pHwndRenderTarget);
-  SafeRelease(&m_pFactory);
+  SafeRelease(&m_d2dFactory);
 }
 
 LRESULT MetroWindow::InitializeWindow() {
@@ -204,19 +204,40 @@ LRESULT MetroWindow::InitializeWindow() {
                  g_Dpi->Scale(540)};
   Create(nullptr, layout, L"PE File Analyzer", WS_NORESIZEWINDOW,
          WS_EX_APPWINDOW | WS_EX_WINDOWEDGE);
+  int numArgc = 0;
+  auto Argv = CommandLineToArgvW(GetCommandLineW(), &numArgc);
+  if (Argv) {
+	  if (numArgc >= 2 && PathFileExistsW(Argv[1])) {
+		  ::SetWindowTextW(hEdit, Argv[1]);
+		  this->PortableExecutableFileRander(Argv[1]);
+	  }
+	  LocalFree(Argv);
+  }
   return S_OK;
 }
 
 ///
 HRESULT MetroWindow::CreateDeviceIndependentResources() {
+  D2D1_FACTORY_OPTIONS options;
+  ZeroMemory(&options, sizeof(D2D1_FACTORY_OPTIONS));
   HRESULT hr = S_OK;
-  hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pFactory);
+  hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_d2dFactory);
+  if (SUCCEEDED(hr)) {
+	  hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+		  reinterpret_cast<IUnknown **>(&m_pWriteFactory));
+	  if (hr != S_OK)
+		  return hr;
+	  hr = m_pWriteFactory->CreateTextFormat(
+		  L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+		  DWRITE_FONT_STRETCH_NORMAL, 12.0f * 96.0f / 72.0f, L"zh-CN",
+		  &m_pWriteTextFormat);
+  }
   return hr;
 }
 HRESULT MetroWindow::Initialize() {
   auto hr = CreateDeviceIndependentResources();
   FLOAT dpiX, dpiY;
-  m_pFactory->GetDesktopDpi(&dpiX, &dpiY);
+  m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);
   return hr;
 }
 HRESULT MetroWindow::CreateDeviceResources() {
@@ -227,9 +248,12 @@ HRESULT MetroWindow::CreateDeviceResources() {
     ::GetClientRect(m_hWnd, &rc);
 
     D2D1_SIZE_U size = D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top);
-    hr = m_pFactory->CreateHwndRenderTarget(
+    hr = m_d2dFactory->CreateHwndRenderTarget(
         D2D1::RenderTargetProperties(),
         D2D1::HwndRenderTargetProperties(m_hWnd, size), &m_pHwndRenderTarget);
+	if (SUCCEEDED(hr)) {
+		//hr = m_d2dFactory->CreateDevice();
+	}
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
           D2D1::ColorF(D2D1::ColorF::Blue), &m_pBakcgroundEdgeBrush);
@@ -240,38 +264,39 @@ HRESULT MetroWindow::CreateDeviceResources() {
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
-          D2D1::ColorF(D2D1::ColorF::Orange), &m_PushButtonNActiveBrush);
-    }
-    if (SUCCEEDED(hr)) {
-      hr = m_pHwndRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xFFC300),
-                                                      &m_PushButtonActiveBrush);
+		  D2D1::ColorF(D2D1::ColorF::Indigo),
+		  &m_PushButtonBackgoundBrush);
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
-          D2D1::ColorF(D2D1::ColorF::DarkOrange, 2.0f),
+		  D2D1::ColorF(D2D1::ColorF::White),
+		  &m_PushButtonForegroundBrush);
+    }
+    if (SUCCEEDED(hr)) {
+      hr = m_pHwndRenderTarget->CreateSolidColorBrush(
+          D2D1::ColorF(D2D1::ColorF::Purple),
           &m_PushButtonClickBrush);
     }
   }
   return hr;
 }
-void MetroWindow::DiscardDeviceResources() { SafeRelease(&m_pSolidColorBrush); }
+void MetroWindow::DiscardDeviceResources() { 
+	SafeRelease(&m_pSolidColorBrush); 
+	SafeRelease(&m_pBakcgroundEdgeBrush);
+	SafeRelease(&m_PushButtonForegroundBrush);
+	SafeRelease(&m_PushButtonClickBrush);
+	SafeRelease(&m_PushButtonBackgoundBrush);
+}
+
 HRESULT MetroWindow::OnRender() {
   auto hr = CreateDeviceResources();
-  hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
-                           reinterpret_cast<IUnknown **>(&m_pWriteFactory));
-  if (hr != S_OK)
-    return hr;
-  hr = m_pWriteFactory->CreateTextFormat(
-      L"Segoe UI", NULL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-      DWRITE_FONT_STRETCH_NORMAL, 12.0f * 96.0f / 72.0f, L"zh-CN",
-      &m_pWriteTextFormat);
 #pragma warning(disable : 4244)
 #pragma warning(disable : 4267)
   if (SUCCEEDED(hr)) {
     m_pHwndRenderTarget->BeginDraw();
     m_pHwndRenderTarget->SetTransform(D2D1::Matrix3x2F::Identity());
     m_pHwndRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 1.0f));
-    // m_pWriteTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    m_pWriteTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
     for (auto &label : label_) {
       if (label.text.empty())
         continue;
@@ -300,10 +325,6 @@ HRESULT MetroWindow::OnRender() {
     }
     m_pWriteTextFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
     for (auto &b : button_) {
-      m_pHwndRenderTarget->DrawRectangle(
-          D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
-                      b.layout.bottom),
-          m_pBakcgroundEdgeBrush, 0.3f, 0);
       switch (b.status) {
       case MetroButton::kKeyDown:
         m_pHwndRenderTarget->FillRectangle(
@@ -315,14 +336,18 @@ HRESULT MetroWindow::OnRender() {
         m_pHwndRenderTarget->FillRectangle(
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
-            m_PushButtonActiveBrush);
+            m_PushButtonForegroundBrush);
         break;
       case MetroButton::kKeyLeave:
       default:
+		  m_pHwndRenderTarget->DrawRectangle(
+			  D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
+				  b.layout.bottom),
+			  m_PushButtonClickBrush, 0.5f, 0);
         m_pHwndRenderTarget->FillRectangle(
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
-            m_PushButtonNActiveBrush);
+            m_PushButtonBackgoundBrush);
         break;
       }
       if (!b.caption.empty()) {
@@ -330,7 +355,7 @@ HRESULT MetroWindow::OnRender() {
             b.caption.c_str(), b.caption.size(), m_pWriteTextFormat,
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
-            m_pSolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+			m_PushButtonForegroundBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
             DWRITE_MEASURING_MODE_NATURAL);
       }
     }
@@ -408,8 +433,7 @@ LRESULT MetroWindow::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirect(&logFont);
 
-  HWND hEdit =
-      CreateWindowExW(dwEditEx, WC_EDITW, L"", dwEdit, 80, 40, 360, 27, m_hWnd,
+  hEdit =CreateWindowExW(dwEditEx, WC_EDITW, L"", dwEdit, 80, 40, 360, 27, m_hWnd,
                       HMENU(IDC_IMAGE_URI_EDIT), HINST_THISCOMPONENT, NULL);
   //::SetWindowFont(hEdit, hFont, TRUE);
   ::SendMessage(hEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -425,6 +449,7 @@ LRESULT MetroWindow::OnClose(UINT nMsg, WPARAM wParam, LPARAM lParam,
   ::DestroyWindow(m_hWnd);
   return S_OK;
 }
+
 LRESULT MetroWindow::OnSize(UINT nMsg, WPARAM wParam, LPARAM lParam,
                             BOOL &bHandle) {
   UINT width = LOWORD(lParam);
@@ -477,7 +502,7 @@ LRESULT MetroWindow::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
   return S_OK;
 }
 
-LRESULT MetroWindow::OnLButtonUP(UINT nMsg, WPARAM wParam, LPARAM lParam,
+LRESULT MetroWindow::OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
                                  BOOL &bHandle) {
   POINT pt;
   GetCursorPos(&pt);
@@ -486,12 +511,10 @@ LRESULT MetroWindow::OnLButtonUP(UINT nMsg, WPARAM wParam, LPARAM lParam,
     if (pt.x >= b.layout.left && pt.x <= b.layout.right &&
         pt.y >= b.layout.top && pt.y <= b.layout.bottom) {
       b.callback(L"this is debug message");
-      b.status = MetroButton::kKeyActive;
-      break;
-    }
-    b.status = MetroButton::kKeyLeave;
+	}
+	b.status = MetroButton::kKeyLeave;
   }
-  ::InvalidateRect(m_hWnd, nullptr, TRUE);
+  ::InvalidateRect(m_hWnd, nullptr, FALSE);
   return 0;
 }
 LRESULT MetroWindow::OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam,
@@ -513,8 +536,8 @@ LRESULT MetroWindow::OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam,
 
 LRESULT MetroWindow::DiscoverIMAGEButtonActive(const wchar_t *debugMessage) {
   std::wstring pefile;
-  if (PEFileDiscoverWindow(m_hWnd, pefile, L"Found PE File")) {
-    ::SetWindowTextW(GetDlgItem(IDC_IMAGE_URI_EDIT), pefile.c_str());
+  if (OpenFileWindow(m_hWnd, pefile, L"Found PE File")) {
+    ::SetWindowTextW(hEdit, pefile.c_str());
     if (PortableExecutableFileRander(pefile) != S_OK) {
       ::MessageBoxW(m_hWnd, pefile.c_str(), L"Cannot analyzer this file",
                     MB_OK | MB_ICONSTOP);
@@ -553,7 +576,7 @@ LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file) {
   item_.push_back(std::move(linkVersion));
   item_.push_back(std::move(osVersion));
   item_.push_back(std::move(clrMessage));
-  ::InvalidateRect(m_hWnd, nullptr, FALSE);
+  ::InvalidateRect(m_hWnd, nullptr, TRUE);
   // MessageBox(portableExecuteFile.GetCharacteristics().c_str(), L"This
   // Characteristics", MB_OK);
   return S_OK;
