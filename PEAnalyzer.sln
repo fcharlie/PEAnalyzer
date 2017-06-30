@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PEAnalyzer", "PEAnalyzer\PEAnalyzer.vcxproj", "{5DC6EC41-253A-4D3F-97ED-F6E60A464C9F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pecli", "Pecli\Pecli.vcxproj", "{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -21,6 +23,14 @@ Global
 		{5DC6EC41-253A-4D3F-97ED-F6E60A464C9F}.Release|Win32.Build.0 = Release|Win32
 		{5DC6EC41-253A-4D3F-97ED-F6E60A464C9F}.Release|x64.ActiveCfg = Release|x64
 		{5DC6EC41-253A-4D3F-97ED-F6E60A464C9F}.Release|x64.Build.0 = Release|x64
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Debug|Win32.Build.0 = Debug|Win32
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Debug|x64.ActiveCfg = Debug|x64
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Debug|x64.Build.0 = Debug|x64
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Release|Win32.ActiveCfg = Release|Win32
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Release|Win32.Build.0 = Release|Win32
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Release|x64.ActiveCfg = Release|x64
+		{C863AB63-2D5A-4D60-A1B2-3CB2225334D0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

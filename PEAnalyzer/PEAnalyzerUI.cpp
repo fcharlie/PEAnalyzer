@@ -327,6 +327,10 @@ HRESULT MetroWindow::OnRender() {
     for (auto &b : button_) {
       switch (b.status) {
       case MetroButton::kKeyDown:
+		m_pHwndRenderTarget->DrawRectangle(
+			  D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
+				  b.layout.bottom),
+			m_PushButtonBackgoundBrush, 0.5f, 0);
         m_pHwndRenderTarget->FillRectangle(
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
@@ -336,7 +340,7 @@ HRESULT MetroWindow::OnRender() {
         m_pHwndRenderTarget->FillRectangle(
             D2D1::RectF(b.layout.left, b.layout.top, b.layout.right,
                         b.layout.bottom),
-            m_PushButtonForegroundBrush);
+			m_PushButtonClickBrush);
         break;
       case MetroButton::kKeyLeave:
       default:
@@ -410,7 +414,7 @@ LRESULT MetroWindow::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   HICON hIcon =
       LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_PEANALYZER));
 
-  std::wstring title = L"PE Aanlyzer [";
+  std::wstring title = L"PE Analyzer [";
   title += WindowTitleUpdate();
   title.append(L"]");
   SetWindowText(title.data());
