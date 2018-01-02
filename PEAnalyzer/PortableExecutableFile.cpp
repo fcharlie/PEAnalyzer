@@ -54,7 +54,7 @@ public:
   bool CreateFileMap(const wchar_t *name) {
     if (status = kCreateFile) {
       hMapFile = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, name);
-      if (hMapFile == nullptr)
+      if (hMapFile == INVALID_HANDLE_VALUE)
         return false;
       status = kCreateFileMap;
       return true;
