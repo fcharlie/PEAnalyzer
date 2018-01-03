@@ -497,6 +497,8 @@ LRESULT MetroWindow::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
       if (PortableExecutableFileRander(filelist.at(0)) != S_OK) {
         ::MessageBoxW(m_hWnd, filelist.at(0).c_str(),
                       L"Cannot analyzer this file", MB_OK | MB_ICONSTOP);
+		
+		
         return S_FALSE;
       }
     }

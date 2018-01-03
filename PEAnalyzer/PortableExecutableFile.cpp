@@ -3,8 +3,9 @@
 
 #include "stdafx.h"
 #include <Dbghelp.h>
-#include <codecvt>
 #include <winnt.h>
+#include <string>
+#include <string_view>
 ///
 #include "PortableExecutableFile.h"
 #pragma comment(lib, "DbgHelp.lib")
@@ -14,67 +15,15 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
-enum FileMappingStatus {
-  kNotOptions,
-  kCreateFile,
-  kCreateFileMap,
-  kMapViewFile
-};
+inline std::wstring to_utf16(const std::string_view &s) {
+	const int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, nullptr, 0);
+	std::wstring output;
+	output.resize(size - 1);
+	MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, output.data(), size - 1);
+	return output;
+}
 
-class WinMapFile {
-private:
-  HANDLE hFile = nullptr;
-  HANDLE hMapFile = nullptr;
-  LPVOID baseAddress = nullptr;
-  int status = kNotOptions;
 
-public:
-  ~WinMapFile() {
-    switch (status) {
-    case kMapViewFile:
-      UnmapViewOfFile(baseAddress);
-    case kCreateFileMap:
-      CloseHandle(hMapFile);
-    case kCreateFile:
-      CloseHandle(hFile);
-      break;
-    case kNotOptions:
-    default:
-      break;
-    }
-  }
-  bool Open(const std::wstring &path) {
-    hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
-                        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-      return false;
-    status = kCreateFile;
-    return true;
-  }
-  bool CreateFileMap(const wchar_t *name) {
-    if (status = kCreateFile) {
-      hMapFile = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, name);
-      if (hMapFile == INVALID_HANDLE_VALUE)
-        return false;
-      status = kCreateFileMap;
-      return true;
-    }
-  }
-  PVOID MapViewOfFile() {
-    baseAddress = ::MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
-    if (baseAddress == nullptr)
-      return nullptr;
-    status = kMapViewFile;
-    return baseAddress;
-  }
-  HANDLE Get() { return hFile; }
-  void Close() {
-    if (hFile) {
-      CloseHandle(hFile);
-      hFile = nullptr;
-    }
-  }
-};
 
 struct VALUE_STRING {
   int index;
@@ -220,95 +169,129 @@ CatalogOffset; DWORD   Reserved;       // Additional bitmask to be defined later
 //
 */
 
+bool PortableExecutableFile::AnalyzePE64(PIMAGE_NT_HEADERS64 nh,void* hd) {
+	auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER64*>(hd);
+	for (auto &sub : subsystemTable) {
+		if (sub.index == oh->Subsystem) {
+			subsystem = sub.str;
+		}
+	}
+	wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
+		oh->MinorLinkerVersion);
+	wsprintfW(osVersion, L"%d.%d",
+		oh->MajorOperatingSystemVersion,
+		oh->MinorOperatingSystemVersion);
+	wsprintfW(subsystemVersion, L"%d.%d",
+		oh->MajorSubsystemVersion,
+		oh->MinorSubsystemVersion);
+	wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
+		oh->MinorImageVersion);
+	auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
+
+	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
+		return true;
+	}
+	auto baseAddr = mv.BaseAddress();
+	auto va = ImageRvaToVa(nh, baseAddr, entry->VirtualAddress, 0);
+	if ((char *)va - baseAddr > mv.FileSize()) {
+		return false;
+	}
+	auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
+	auto pm = reinterpret_cast<char *>(
+		ImageRvaToVa(nh, baseAddr,
+			clr->MetaData.VirtualAddress, 0)
+		);
+	if ((char *)pm - baseAddr > mv.FileSize()) {
+		return false;
+	}
+	auto buildMessage = pm + 16;
+	clrMessage = to_utf16(buildMessage);
+	return true;
+}
+bool PortableExecutableFile::AnalyzePE32(PIMAGE_NT_HEADERS32 nh,void* hd) {
+	auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER32 *>(hd);
+	for (auto &sub : subsystemTable) {
+		if (sub.index == oh->Subsystem) {
+			subsystem = sub.str;
+		}
+	}
+	wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
+		oh->MinorLinkerVersion);
+	wsprintfW(osVersion, L"%d.%d",
+		oh->MajorOperatingSystemVersion,
+		oh->MinorOperatingSystemVersion);
+	wsprintfW(subsystemVersion, L"%d.%d",
+		oh->MajorSubsystemVersion,
+		oh->MinorSubsystemVersion);
+	wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
+		oh->MinorImageVersion);
+	auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
+	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
+		return true;
+	}
+	auto baseAddr = mv.BaseAddress();
+	auto va = ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr, entry->VirtualAddress, 0);
+	if ((char *)va - baseAddr > mv.FileSize()) {
+		return false;
+	}
+	auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
+	auto pm = reinterpret_cast<char *>(
+		ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr,
+			clr->MetaData.VirtualAddress, 0)
+		);
+	if ((char *)pm - baseAddr > mv.FileSize()) {
+		return false;
+	}
+	auto buildMessage = pm + 16;
+	clrMessage = to_utf16(buildMessage);
+	return true;
+}
+
 bool PortableExecutableFile::Analyzer() {
-  WinMapFile winfile;
-  if (!winfile.Open(mPath_)) {
-    return false;
+  constexpr const size_t minsize = sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS);
+  if (!mv.Fileview(mPath_)) {
+	  return false;
   }
-  LARGE_INTEGER largeFile;
-  if (!GetFileSizeEx(winfile.Get(), &largeFile))
-    return false;
-  if (largeFile.QuadPart < sizeof(IMAGE_DOS_HEADER))
-    return false;
-  if (!winfile.CreateFileMap(L"PEAnalyzer.Executeable.MAP"))
-    return false;
-  char *baseAddress = (char *)winfile.MapViewOfFile();
-  IMAGE_DOS_HEADER *pDOSHeader =
-      reinterpret_cast<IMAGE_DOS_HEADER *>(baseAddress);
-  IMAGE_NT_HEADERS *pNTHeader =
-      reinterpret_cast<IMAGE_NT_HEADERS *>(baseAddress + pDOSHeader->e_lfanew);
-  if (largeFile.QuadPart <
-      (LONGLONG)(sizeof(IMAGE_DOS_HEADER) + pDOSHeader->e_lfanew +
-                 sizeof(IMAGE_NT_HEADERS)))
-    return false;
+  if (mv.FileSize() < minsize) {
+	  return false;
+  }
+  auto dh = reinterpret_cast<IMAGE_DOS_HEADER *>(mv.BaseAddress());
+  if (minsize + dh->e_lfanew >= mv.FileSize()) {
+	  return false;
+  }
+  auto nh = reinterpret_cast<IMAGE_NT_HEADERS *>(mv.BaseAddress() + dh->e_lfanew);
   union SigMask {
     DWORD dw;
     char c[4];
   };
   SigMask sigmark;
-  sigmark.dw = pNTHeader->Signature;
+  sigmark.dw = nh->Signature;
   for (auto &c : sigmark.c) {
     magicStr.push_back(c);
   }
   for (auto &m : machineTable) {
-    if (m.index == pNTHeader->FileHeader.Machine) {
+    if (m.index == nh->FileHeader.Machine) {
       machine = m.str;
       break;
     }
   }
-  for (auto &sub : subsystemTable) {
-    if (sub.index == pNTHeader->OptionalHeader.Subsystem) {
-      subsystem = sub.str;
-    }
-  }
-  auto var = pNTHeader->FileHeader.Characteristics;
-  if ((pNTHeader->FileHeader.Characteristics & IMAGE_FILE_DLL) ==
+
+  auto var = nh->FileHeader.Characteristics;
+  if ((nh->FileHeader.Characteristics & IMAGE_FILE_DLL) ==
       IMAGE_FILE_DLL) {
     mCharacteristics = L"Dynamic Link Library";
-  } else if ((pNTHeader->FileHeader.Characteristics & IMAGE_FILE_SYSTEM) ==
+  } else if ((nh->FileHeader.Characteristics & IMAGE_FILE_SYSTEM) ==
              IMAGE_FILE_SYSTEM) {
     mCharacteristics = L"System File";
-  } else if ((pNTHeader->FileHeader.Characteristics &
+  } else if ((nh->FileHeader.Characteristics &
               IMAGE_FILE_EXECUTABLE_IMAGE) == IMAGE_FILE_EXECUTABLE_IMAGE) {
     mCharacteristics = L"Executable File";
   } else {
     mCharacteristics = std::wstring(L"Characteristics value: ") +
-                       std::to_wstring(pNTHeader->FileHeader.Characteristics);
+                       std::to_wstring(nh->FileHeader.Characteristics);
   }
-  wsprintfW(linkVersion, L"%d.%d", pNTHeader->OptionalHeader.MajorLinkerVersion,
-            pNTHeader->OptionalHeader.MinorLinkerVersion);
-  wsprintfW(osVersion, L"%d.%d",
-            pNTHeader->OptionalHeader.MajorOperatingSystemVersion,
-            pNTHeader->OptionalHeader.MinorOperatingSystemVersion);
-  wsprintfW(subsystemVersion, L"%d.%d",
-            pNTHeader->OptionalHeader.MajorSubsystemVersion,
-            pNTHeader->OptionalHeader.MinorSubsystemVersion);
-  wsprintfW(imageVersion, L"%d.%d", pNTHeader->OptionalHeader.MajorImageVersion,
-            pNTHeader->OptionalHeader.MinorImageVersion);
-  auto self = &__ImageBase;
-  auto selfNTHeader =
-      reinterpret_cast<IMAGE_NT_HEADERS *>((char *)self + self->e_lfanew);
-  if (selfNTHeader->FileHeader.Machine != pNTHeader->FileHeader.Machine) {
-    clrMessage = L"PEAnaylzer's Architecture is different with Input PE "
-                 L"File,cannot check CLR";
-    return true;
+  if (nh->FileHeader.SizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64)) {
+	  return AnalyzePE64(nh,&(nh->OptionalHeader));
   }
-  IMAGE_DATA_DIRECTORY *entry =
-      &(pNTHeader->OptionalHeader)
-           .DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER];
-  if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
-    return true;
-  }
-  auto va = ImageRvaToVa(pNTHeader, baseAddress, entry->VirtualAddress, 0);
-  if ((char *)va - baseAddress > largeFile.QuadPart)
-    return false;
-  IMAGE_COR20_HEADER *pCLRHeader = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
-  char *pMetaDataAddress = reinterpret_cast<char *>(ImageRvaToVa(
-      pNTHeader, baseAddress, pCLRHeader->MetaData.VirtualAddress, 0));
-  if (pMetaDataAddress - baseAddress > largeFile.QuadPart)
-    return false;
-  char *buildMessage = pMetaDataAddress + 16;
-  std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-  clrMessage = conv.from_bytes(buildMessage);
-  return true;
+  return AnalyzePE32((PIMAGE_NT_HEADERS32)nh,&(nh->OptionalHeader));
 }

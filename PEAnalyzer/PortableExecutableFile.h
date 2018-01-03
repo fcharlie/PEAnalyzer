@@ -3,7 +3,7 @@
 #ifndef PORTABLE_EXECUTABLE_FILE_H
 #define PORTABLE_EXECUTABLE_FILE_H
 #include <string>
-
+#include <Windows.h>
 
 #ifndef PROCESSOR_ARCHITECTURE_ARM64
 #define PROCESSOR_ARCHITECTURE_ARM64            12
@@ -37,6 +37,59 @@ typedef enum ReplacesGeneralNumericDefines {
 
 const wchar_t *ArchitectureName(int id);
 
+class Memview {
+public:
+	Memview() = default;
+	Memview(const Memview &) = delete;
+	Memview&operator=(const Memview &) = delete;
+	~Memview() {
+		if (ismaped) {
+			UnmapViewOfFile(hMap);
+		}
+		if (hMap != INVALID_HANDLE_VALUE) {
+			CloseHandle(hMap);
+		}
+		if (hFile != INVALID_HANDLE_VALUE) {
+			CloseHandle(hFile);
+		}
+	}
+	bool Fileview(const std::wstring_view &path) {
+		hFile = CreateFileW(path.data(), GENERIC_READ, FILE_SHARE_READ, NULL,
+			OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+		LARGE_INTEGER li;
+		if (GetFileSizeEx(hFile, &li)) {
+			filesize = li.QuadPart;
+		}
+		hMap = CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+		if (hMap == INVALID_HANDLE_VALUE) {
+			return false;
+		}
+		baseAddress = ::MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
+		if (baseAddress == nullptr)
+		{
+			return false;
+		}
+		ismaped = true;
+		return true;
+	}
+	int64_t FileSize()const {
+		return filesize;
+	}
+	char *BaseAddress() {
+		return reinterpret_cast<char *>(baseAddress);
+	}
+private:
+	HANDLE hFile{ INVALID_HANDLE_VALUE };
+	HANDLE hMap{ INVALID_HANDLE_VALUE };
+	LPVOID baseAddress{ nullptr };
+	int64_t filesize{ 0 };
+	bool ismaped{ false };
+};
+
 class PortableExecutableFile {
 private:
   std::wstring mPath_;
@@ -49,7 +102,9 @@ private:
   wchar_t osVersion[16];
   wchar_t subsystemVersion[16];
   wchar_t imageVersion[16];
-
+  Memview mv;
+  bool AnalyzePE64(PIMAGE_NT_HEADERS64 nh,void* hd);
+  bool AnalyzePE32(PIMAGE_NT_HEADERS32 nh,void* hd);
 public:
   PortableExecutableFile(const std::wstring &mPath);
   bool Analyzer();
