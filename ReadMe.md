@@ -33,4 +33,4 @@ Click 'Find' button,select file, Or Drag File to Edit Control
 
 This tool use MIT License
 
-Copyright &copy; 2017 Force Charlie, All Rights Reserved.    
+Copyright &copy; 2018 Force Charlie, All Rights Reserved.    

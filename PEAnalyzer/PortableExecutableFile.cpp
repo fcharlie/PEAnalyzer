@@ -16,14 +16,12 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #endif
 
 inline std::wstring to_utf16(const std::string_view &s) {
-	const int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, nullptr, 0);
-	std::wstring output;
-	output.resize(size - 1);
-	MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, output.data(), size - 1);
-	return output;
+  const int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, nullptr, 0);
+  std::wstring output;
+  output.resize(size - 1);
+  MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, output.data(), size - 1);
+  return output;
 }
-
-
 
 struct VALUE_STRING {
   int index;
@@ -31,32 +29,30 @@ struct VALUE_STRING {
 };
 
 const VALUE_STRING archList[] = {
-	{ PROCESSOR_ARCHITECTURE_INTEL ,L"Win32"},
-	{ PROCESSOR_ARCHITECTURE_MIPS, L"MIPS" },
-	{ PROCESSOR_ARCHITECTURE_ALPHA, L"Alpha" },
-	{ PROCESSOR_ARCHITECTURE_PPC, L"PPC" },
-	{ PROCESSOR_ARCHITECTURE_SHX, L"SHX" },
-	{ PROCESSOR_ARCHITECTURE_ARM, L"ARM" },
-	{ PROCESSOR_ARCHITECTURE_IA64, L"IA64" },
-	{ PROCESSOR_ARCHITECTURE_ALPHA64, L"Alpha64" },
-	{ PROCESSOR_ARCHITECTURE_MSIL, L"MSIL" },
-	{ PROCESSOR_ARCHITECTURE_AMD64, L"Win64" },
-	{ PROCESSOR_ARCHITECTURE_IA32_ON_WIN64, L"Wow64" },
-	{ PROCESSOR_ARCHITECTURE_NEUTRAL, L"Neutral" },
-	{ PROCESSOR_ARCHITECTURE_ARM64, L"ARM64" },
-	{ PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64, L"ARM32-Win64" },
-	{ PROCESSOR_ARCHITECTURE_IA32_ON_ARM64, L"IA32-ARM64" },
+    {PROCESSOR_ARCHITECTURE_INTEL, L"Win32"},
+    {PROCESSOR_ARCHITECTURE_MIPS, L"MIPS"},
+    {PROCESSOR_ARCHITECTURE_ALPHA, L"Alpha"},
+    {PROCESSOR_ARCHITECTURE_PPC, L"PPC"},
+    {PROCESSOR_ARCHITECTURE_SHX, L"SHX"},
+    {PROCESSOR_ARCHITECTURE_ARM, L"ARM"},
+    {PROCESSOR_ARCHITECTURE_IA64, L"IA64"},
+    {PROCESSOR_ARCHITECTURE_ALPHA64, L"Alpha64"},
+    {PROCESSOR_ARCHITECTURE_MSIL, L"MSIL"},
+    {PROCESSOR_ARCHITECTURE_AMD64, L"Win64"},
+    {PROCESSOR_ARCHITECTURE_IA32_ON_WIN64, L"Wow64"},
+    {PROCESSOR_ARCHITECTURE_NEUTRAL, L"Neutral"},
+    {PROCESSOR_ARCHITECTURE_ARM64, L"ARM64"},
+    {PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64, L"ARM32-Win64"},
+    {PROCESSOR_ARCHITECTURE_IA32_ON_ARM64, L"IA32-ARM64"},
 };
 
-const wchar_t *ArchitectureName(int id)
-{
-	for (auto &x : archList) {
-		if (x.index == id)
-			return x.str;
-	}
-	return L"Unknown";
+const wchar_t *ArchitectureName(int id) {
+  for (auto &x : archList) {
+    if (x.index == id)
+      return x.str;
+  }
+  return L"Unknown";
 }
-
 
 const VALUE_STRING machineTable[] = {
     {IMAGE_FILE_MACHINE_UNKNOWN, L"Unknown Machine"},
@@ -169,97 +165,92 @@ CatalogOffset; DWORD   Reserved;       // Additional bitmask to be defined later
 //
 */
 
-bool PortableExecutableFile::AnalyzePE64(PIMAGE_NT_HEADERS64 nh,void* hd) {
-	auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER64*>(hd);
-	for (auto &sub : subsystemTable) {
-		if (sub.index == oh->Subsystem) {
-			subsystem = sub.str;
-		}
-	}
-	wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
-		oh->MinorLinkerVersion);
-	wsprintfW(osVersion, L"%d.%d",
-		oh->MajorOperatingSystemVersion,
-		oh->MinorOperatingSystemVersion);
-	wsprintfW(subsystemVersion, L"%d.%d",
-		oh->MajorSubsystemVersion,
-		oh->MinorSubsystemVersion);
-	wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
-		oh->MinorImageVersion);
-	auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
+bool PortableExecutableFile::AnalyzePE64(PIMAGE_NT_HEADERS64 nh, void *hd) {
+  auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER64 *>(hd);
+  for (auto &sub : subsystemTable) {
+    if (sub.index == oh->Subsystem) {
+      subsystem = sub.str;
+    }
+  }
+  wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
+            oh->MinorLinkerVersion);
+  wsprintfW(osVersion, L"%d.%d", oh->MajorOperatingSystemVersion,
+            oh->MinorOperatingSystemVersion);
+  wsprintfW(subsystemVersion, L"%d.%d", oh->MajorSubsystemVersion,
+            oh->MinorSubsystemVersion);
+  wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
+            oh->MinorImageVersion);
+  auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
 
-	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
-		return true;
-	}
-	auto baseAddr = mv.BaseAddress();
-	auto va = ImageRvaToVa(nh, baseAddr, entry->VirtualAddress, 0);
-	if ((char *)va - baseAddr > mv.FileSize()) {
-		return false;
-	}
-	auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
-	auto pm = reinterpret_cast<char *>(
-		ImageRvaToVa(nh, baseAddr,
-			clr->MetaData.VirtualAddress, 0)
-		);
-	if ((char *)pm - baseAddr > mv.FileSize()) {
-		return false;
-	}
-	auto buildMessage = pm + 16;
-	clrMessage = to_utf16(buildMessage);
-	return true;
+  if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
+    return true;
+  }
+  auto baseAddr = mv.BaseAddress();
+  auto va = ImageRvaToVa(nh, baseAddr, entry->VirtualAddress, 0);
+  if ((char *)va - baseAddr > mv.FileSize()) {
+    return false;
+  }
+  auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
+  auto pm = reinterpret_cast<char *>(
+      ImageRvaToVa(nh, baseAddr, clr->MetaData.VirtualAddress, 0));
+  if ((char *)pm - baseAddr > mv.FileSize()) {
+    return false;
+  }
+  auto buildMessage = pm + 16;
+  clrMessage = to_utf16(buildMessage);
+  return true;
 }
-bool PortableExecutableFile::AnalyzePE32(PIMAGE_NT_HEADERS32 nh,void* hd) {
-	auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER32 *>(hd);
-	for (auto &sub : subsystemTable) {
-		if (sub.index == oh->Subsystem) {
-			subsystem = sub.str;
-		}
-	}
-	wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
-		oh->MinorLinkerVersion);
-	wsprintfW(osVersion, L"%d.%d",
-		oh->MajorOperatingSystemVersion,
-		oh->MinorOperatingSystemVersion);
-	wsprintfW(subsystemVersion, L"%d.%d",
-		oh->MajorSubsystemVersion,
-		oh->MinorSubsystemVersion);
-	wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
-		oh->MinorImageVersion);
-	auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
-	if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
-		return true;
-	}
-	auto baseAddr = mv.BaseAddress();
-	auto va = ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr, entry->VirtualAddress, 0);
-	if ((char *)va - baseAddr > mv.FileSize()) {
-		return false;
-	}
-	auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
-	auto pm = reinterpret_cast<char *>(
-		ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr,
-			clr->MetaData.VirtualAddress, 0)
-		);
-	if ((char *)pm - baseAddr > mv.FileSize()) {
-		return false;
-	}
-	auto buildMessage = pm + 16;
-	clrMessage = to_utf16(buildMessage);
-	return true;
+bool PortableExecutableFile::AnalyzePE32(PIMAGE_NT_HEADERS32 nh, void *hd) {
+  auto oh = reinterpret_cast<IMAGE_OPTIONAL_HEADER32 *>(hd);
+  for (auto &sub : subsystemTable) {
+    if (sub.index == oh->Subsystem) {
+      subsystem = sub.str;
+    }
+  }
+  wsprintfW(linkVersion, L"%d.%d", oh->MajorLinkerVersion,
+            oh->MinorLinkerVersion);
+  wsprintfW(osVersion, L"%d.%d", oh->MajorOperatingSystemVersion,
+            oh->MinorOperatingSystemVersion);
+  wsprintfW(subsystemVersion, L"%d.%d", oh->MajorSubsystemVersion,
+            oh->MinorSubsystemVersion);
+  wsprintfW(imageVersion, L"%d.%d", oh->MajorImageVersion,
+            oh->MinorImageVersion);
+  auto entry = &(oh->DataDirectory[IMAGE_DIRECTORY_ENTRY_COMHEADER]);
+  if (entry->Size != sizeof(IMAGE_COR20_HEADER)) {
+    return true;
+  }
+  auto baseAddr = mv.BaseAddress();
+  auto va =
+      ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr, entry->VirtualAddress, 0);
+  if ((char *)va - baseAddr > mv.FileSize()) {
+    return false;
+  }
+  auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
+  auto pm = reinterpret_cast<char *>(ImageRvaToVa(
+      (PIMAGE_NT_HEADERS)nh, baseAddr, clr->MetaData.VirtualAddress, 0));
+  if ((char *)pm - baseAddr > mv.FileSize()) {
+    return false;
+  }
+  auto buildMessage = pm + 16;
+  clrMessage = to_utf16(buildMessage);
+  return true;
 }
 
 bool PortableExecutableFile::Analyzer() {
-  constexpr const size_t minsize = sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS);
+  constexpr const size_t minsize =
+      sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS);
   if (!mv.Fileview(mPath_)) {
-	  return false;
+    return false;
   }
   if (mv.FileSize() < minsize) {
-	  return false;
+    return false;
   }
   auto dh = reinterpret_cast<IMAGE_DOS_HEADER *>(mv.BaseAddress());
   if (minsize + dh->e_lfanew >= mv.FileSize()) {
-	  return false;
+    return false;
   }
-  auto nh = reinterpret_cast<IMAGE_NT_HEADERS *>(mv.BaseAddress() + dh->e_lfanew);
+  auto nh =
+      reinterpret_cast<IMAGE_NT_HEADERS *>(mv.BaseAddress() + dh->e_lfanew);
   union SigMask {
     DWORD dw;
     char c[4];
@@ -277,21 +268,20 @@ bool PortableExecutableFile::Analyzer() {
   }
 
   auto var = nh->FileHeader.Characteristics;
-  if ((nh->FileHeader.Characteristics & IMAGE_FILE_DLL) ==
-      IMAGE_FILE_DLL) {
+  if ((nh->FileHeader.Characteristics & IMAGE_FILE_DLL) == IMAGE_FILE_DLL) {
     mCharacteristics = L"Dynamic Link Library";
   } else if ((nh->FileHeader.Characteristics & IMAGE_FILE_SYSTEM) ==
              IMAGE_FILE_SYSTEM) {
     mCharacteristics = L"System File";
-  } else if ((nh->FileHeader.Characteristics &
-              IMAGE_FILE_EXECUTABLE_IMAGE) == IMAGE_FILE_EXECUTABLE_IMAGE) {
+  } else if ((nh->FileHeader.Characteristics & IMAGE_FILE_EXECUTABLE_IMAGE) ==
+             IMAGE_FILE_EXECUTABLE_IMAGE) {
     mCharacteristics = L"Executable File";
   } else {
     mCharacteristics = std::wstring(L"Characteristics value: ") +
                        std::to_wstring(nh->FileHeader.Characteristics);
   }
   if (nh->FileHeader.SizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64)) {
-	  return AnalyzePE64(nh,&(nh->OptionalHeader));
+    return AnalyzePE64(nh, &(nh->OptionalHeader));
   }
-  return AnalyzePE32((PIMAGE_NT_HEADERS32)nh,&(nh->OptionalHeader));
+  return AnalyzePE32((PIMAGE_NT_HEADERS32)nh, &(nh->OptionalHeader));
 }

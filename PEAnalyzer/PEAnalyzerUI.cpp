@@ -391,14 +391,6 @@ void MetroWindow::OnResize(UINT width, UINT height) {
   }
 }
 
-std::wstring WindowTitleUpdate()
-{
-	SYSTEM_INFO sinfo;
-	GetSystemInfo(&sinfo);
-	std::wstring name = ArchitectureName(sinfo.wProcessorArchitecture);
-	return name;
-}
-
 /*
  *  Message Action Function
  */
@@ -414,10 +406,7 @@ LRESULT MetroWindow::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   HICON hIcon =
       LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_PEANALYZER));
 
-  std::wstring title = L"PE Analyzer [";
-  title += WindowTitleUpdate();
-  title.append(L"]");
-  SetWindowText(title.data());
+  SetWindowTextW(L"PE Analyzer");
   SetIcon(hIcon, TRUE);
   ChangeWindowMessageFilter(WM_DROPFILES, MSGFLT_ADD);
   ChangeWindowMessageFilter(WM_COPYDATA, MSGFLT_ADD);
@@ -583,7 +572,5 @@ LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file) {
   item_.push_back(std::move(osVersion));
   item_.push_back(std::move(clrMessage));
   ::InvalidateRect(m_hWnd, nullptr, TRUE);
-  // MessageBox(portableExecuteFile.GetCharacteristics().c_str(), L"This
-  // Characteristics", MB_OK);
   return S_OK;
 }
