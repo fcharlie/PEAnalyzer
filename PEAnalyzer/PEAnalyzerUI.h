@@ -25,7 +25,7 @@
 #define IDC_IMAGE_FIND_BUTTON 1011
 
 bool OpenFileWindow(HWND hParent, std::wstring &filename,
-                          const wchar_t *pszWindowTitle);
+                    const wchar_t *pszWindowTitle);
 
 #define PEANALYZER_UI_MAINWINDOW _T("PEAnalyzer.Render.UI.Window")
 typedef CWinTraits<WS_OVERLAPPEDWINDOW, WS_EX_APPWINDOW | WS_EX_WINDOWEDGE>
@@ -69,7 +69,7 @@ class CDPI;
 class MetroWindow
     : public CWindowImpl<MetroWindow, CWindow, CMetroWindowTraits> {
 private:
-  CDPI *g_Dpi;
+  std::unique_ptr<CDPI> dpi_;
   ID2D1Factory2 *m_d2dFactory;
   ID2D1HwndRenderTarget *m_pHwndRenderTarget;
   ID2D1Device *m_d2dDevice;
@@ -117,7 +117,8 @@ public:
   LRESULT OnSize(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
-  LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
+  LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
+                         BOOL &bHandle);
   LRESULT OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT DiscoverIMAGEButtonActive(const wchar_t *debugMessage);
   ////
