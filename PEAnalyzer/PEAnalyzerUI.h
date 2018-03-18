@@ -13,10 +13,9 @@
 #include <dwrite_2.h>
 #include <wincodec.h>
 //#include <DirectXMath.h>
-#include <vector>
-#include <memory>
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 #include <wincodec.h>
@@ -92,6 +91,7 @@ private:
   D2D1_SIZE_U CalculateD2DWindowSize();
   void OnResize(UINT width, UINT height);
   HWND hEdit;
+  HFONT hFont{nullptr};
   std::vector<MetroLabel> label_;
   std::vector<MetroButton> button_;
   std::vector<MetroTextItem> item_;

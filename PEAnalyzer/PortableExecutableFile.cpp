@@ -3,9 +3,9 @@
 
 #include "stdafx.h"
 #include <Dbghelp.h>
-#include <winnt.h>
 #include <string>
 #include <string_view>
+#include <winnt.h>
 ///
 #include "PortableExecutableFile.h"
 #pragma comment(lib, "DbgHelp.lib")
@@ -186,13 +186,14 @@ bool PortableExecutableFile::AnalyzePE64(PIMAGE_NT_HEADERS64 nh, void *hd) {
     return true;
   }
   auto baseAddr = mv.BaseAddress();
-  auto va = ImageRvaToVa(nh, baseAddr, entry->VirtualAddress, 0);
+  auto va =
+      ImageRvaToVa((PIMAGE_NT_HEADERS)nh, baseAddr, entry->VirtualAddress, 0);
   if ((char *)va - baseAddr > mv.FileSize()) {
     return false;
   }
   auto *clr = reinterpret_cast<IMAGE_COR20_HEADER *>(va);
-  auto pm = reinterpret_cast<char *>(
-      ImageRvaToVa(nh, baseAddr, clr->MetaData.VirtualAddress, 0));
+  auto pm = reinterpret_cast<char *>(ImageRvaToVa(
+      (PIMAGE_NT_HEADERS)nh, baseAddr, clr->MetaData.VirtualAddress, 0));
   if ((char *)pm - baseAddr > mv.FileSize()) {
     return false;
   }
@@ -236,7 +237,47 @@ bool PortableExecutableFile::AnalyzePE32(PIMAGE_NT_HEADERS32 nh, void *hd) {
   return true;
 }
 
+HMODULE KrModule() {
+  static HMODULE hModule = GetModuleHandleW(L"kernel32.dll");
+  if (hModule == nullptr) {
+    OutputDebugStringW(L"GetModuleHandleA failed");
+  }
+  return hModule;
+}
+
+#ifndef _M_X64
+class FsRedirection {
+public:
+  typedef BOOL WINAPI fntype_Wow64DisableWow64FsRedirection(PVOID *OldValue);
+  typedef BOOL WINAPI fntype_Wow64RevertWow64FsRedirection(PVOID *OldValue);
+  FsRedirection() {
+    auto hModule = KrModule();
+    auto pfnWow64DisableWow64FsRedirection =
+        (fntype_Wow64DisableWow64FsRedirection *)GetProcAddress(
+            hModule, "Wow64DisableWow64FsRedirection");
+    if (pfnWow64DisableWow64FsRedirection) {
+      pfnWow64DisableWow64FsRedirection(&OldValue);
+    }
+  }
+  ~FsRedirection() {
+    auto hModule = KrModule();
+    auto pfnWow64RevertWow64FsRedirection =
+        (fntype_Wow64RevertWow64FsRedirection *)GetProcAddress(
+            hModule, "Wow64RevertWow64FsRedirection");
+    if (pfnWow64RevertWow64FsRedirection) {
+      pfnWow64RevertWow64FsRedirection(&OldValue);
+    }
+  }
+
+private:
+  PVOID OldValue = NULL;
+};
+#endif
+
 bool PortableExecutableFile::Analyzer() {
+#ifndef _M_X64
+  FsRedirection fsr;
+#endif
   constexpr const size_t minsize =
       sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS);
   if (!mv.Fileview(mPath_)) {
@@ -281,7 +322,7 @@ bool PortableExecutableFile::Analyzer() {
                        std::to_wstring(nh->FileHeader.Characteristics);
   }
   if (nh->FileHeader.SizeOfOptionalHeader == sizeof(IMAGE_OPTIONAL_HEADER64)) {
-    return AnalyzePE64(nh, &(nh->OptionalHeader));
+    return AnalyzePE64((PIMAGE_NT_HEADERS64)nh, &(nh->OptionalHeader));
   }
   return AnalyzePE32((PIMAGE_NT_HEADERS32)nh, &(nh->OptionalHeader));
 }

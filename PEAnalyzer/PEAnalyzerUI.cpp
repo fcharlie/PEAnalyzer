@@ -8,9 +8,9 @@
 #include <Shlwapi.h>
 #include <d2d1helper.h>
 ////
-#include "Resource.h"
 #include "PEAnalyzerUI.h"
 #include "PortableExecutableFile.h"
+#include "Resource.h"
 //#include <exception>
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "ComDlg32.Lib")
@@ -176,6 +176,9 @@ MetroWindow::~MetroWindow() {
 
   SafeRelease(&m_pHwndRenderTarget);
   SafeRelease(&m_d2dFactory);
+  if (hFont != nullptr) {
+    DeleteFont(hFont);
+  }
 }
 
 LRESULT MetroWindow::InitializeWindow() {
@@ -261,7 +264,7 @@ HRESULT MetroWindow::CreateDeviceResources() {
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
-          D2D1::ColorF(D2D1::ColorF::DarkSlateBlue),
+          D2D1::ColorF(D2D1::ColorF::RoyalBlue),
           &m_PushButtonBackgoundBrush);
     }
     if (SUCCEEDED(hr)) {
@@ -270,7 +273,7 @@ HRESULT MetroWindow::CreateDeviceResources() {
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
-          D2D1::ColorF(D2D1::ColorF::RoyalBlue), &m_PushButtonClickBrush);
+          D2D1::ColorF(D2D1::ColorF::DeepSkyBlue), &m_PushButtonClickBrush);
     }
   }
   return hr;
@@ -411,19 +414,20 @@ LRESULT MetroWindow::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
                    WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE;
   DWORD dwEdit = WS_CHILDWINDOW | WS_CLIPSIBLINGS | WS_VISIBLE | WS_TABSTOP |
                  ES_LEFT | ES_AUTOHSCROLL;
-  HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+  hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
   LOGFONT logFont = {0};
   GetObject(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
-  hFont = NULL;
-  logFont.lfHeight = 19;
+  hFont = nullptr;
+  logFont.lfHeight = dpi_->Scale(19);
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirect(&logFont);
 
-  hEdit =
-      CreateWindowExW(dwEditEx, WC_EDITW, L"", dwEdit, 80, 40, 360, 27, m_hWnd,
-                      HMENU(IDC_IMAGE_URI_EDIT), HINST_THISCOMPONENT, NULL);
+  hEdit = CreateWindowExW(dwEditEx, WC_EDITW, L"", dwEdit, dpi_->Scale(80),
+                          dpi_->Scale(40), dpi_->Scale(360), dpi_->Scale(27),
+                          m_hWnd, HMENU(IDC_IMAGE_URI_EDIT),
+                          HINST_THISCOMPONENT, NULL);
   //::SetWindowFont(hEdit, hFont, TRUE);
   ::SendMessage(hEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
   return S_OK;
@@ -497,10 +501,14 @@ LRESULT MetroWindow::OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
   POINT pt;
   GetCursorPos(&pt);
   ScreenToClient(&pt);
+  // dpi_->ScalePoint(&pt);
   for (auto &b : button_) {
-    if (pt.x >= b.layout.left && pt.x <= b.layout.right &&
-        pt.y >= b.layout.top && pt.y <= b.layout.bottom) {
+    if (pt.x >= dpi_->Scale(b.layout.left) &&
+        pt.x <= dpi_->Scale(b.layout.right) &&
+        pt.y >= dpi_->Scale(b.layout.top) &&
+        pt.y <= dpi_->Scale(b.layout.bottom)) {
       b.callback(L"this is debug message");
+      OutputDebugStringW(L"Debug Now");
     }
     b.status = MetroButton::kKeyLeave;
   }
@@ -512,9 +520,12 @@ LRESULT MetroWindow::OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam,
   POINT pt;
   GetCursorPos(&pt);
   ScreenToClient(&pt);
+  // dpi_->ScalePoint(&pt);
   for (auto &b : button_) {
-    if (pt.x >= b.layout.left && pt.x <= b.layout.right &&
-        pt.y >= b.layout.top && pt.y <= b.layout.bottom) {
+    if (pt.x >= dpi_->Scale(b.layout.left) &&
+        pt.x <= dpi_->Scale(b.layout.right) &&
+        pt.y >= dpi_->Scale(b.layout.top) &&
+        pt.y <= dpi_->Scale(b.layout.bottom)) {
       b.status = MetroButton::kKeyDown;
       break;
     }
