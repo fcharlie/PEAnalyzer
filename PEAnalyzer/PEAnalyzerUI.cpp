@@ -264,8 +264,7 @@ HRESULT MetroWindow::CreateDeviceResources() {
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
-          D2D1::ColorF(D2D1::ColorF::RoyalBlue),
-          &m_PushButtonBackgoundBrush);
+          D2D1::ColorF(D2D1::ColorF::RoyalBlue), &m_PushButtonBackgoundBrush);
     }
     if (SUCCEEDED(hr)) {
       hr = m_pHwndRenderTarget->CreateSolidColorBrush(
@@ -459,6 +458,43 @@ LRESULT MetroWindow::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
   hr = OnRender();
   EndPaint(&ps);
   return hr;
+}
+
+LRESULT MetroWindow::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
+                                  BOOL &bHandle) {
+  HMONITOR hMonitor;
+  POINT pt;
+  UINT dpix = 0, dpiy = 0;
+  HRESULT hr = E_FAIL;
+
+  // Get the DPI for the main monitor, and set the scaling factor
+  pt.x = 1;
+  pt.y = 1;
+  hMonitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+  hr = GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy);
+
+  if (hr != S_OK) {
+    ::MessageBox(NULL, (LPCWSTR)L"GetDpiForMonitor failed",
+                 (LPCWSTR)L"Notification", MB_OK);
+    return FALSE;
+  }
+  dpi_->SetScale(dpix);
+  LOGFONTW logFont = {0};
+  GetObjectW(hFont, sizeof(logFont), &logFont);
+  DeleteObject(hFont);
+  hFont = nullptr;
+  logFont.lfHeight = dpi_->Scale(19);
+  logFont.lfWeight = FW_NORMAL;
+  wcscpy_s(logFont.lfFaceName, L"Segoe UI");
+  hFont = CreateFontIndirectW(&logFont);
+  RECT rect;
+  ::GetClientRect(hEdit, &rect);
+  ::SetWindowPos(hEdit, NULL, dpi_->Scale(rect.left), dpi_->Scale(rect.top),
+                 dpi_->Scale(rect.right - rect.left),
+                 dpi_->Scale(rect.bottom - rect.top),
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+  ::SendMessageW(hEdit, WM_SETFONT, (WPARAM)hFont, lParam);
+  return S_OK;
 }
 
 LRESULT MetroWindow::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,

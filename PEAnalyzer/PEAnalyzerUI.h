@@ -107,6 +107,7 @@ public:
   MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
   MESSAGE_HANDLER(WM_SIZE, OnSize)
   MESSAGE_HANDLER(WM_PAINT, OnPaint)
+  MESSAGE_HANDLER(WM_DPICHANGED,OnDpiChanged);
   MESSAGE_HANDLER(WM_DROPFILES, OnDropfiles)
   MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonClick)
   MESSAGE_HANDLER(WM_LBUTTONDOWN, OnLButtonDown)
@@ -116,6 +117,7 @@ public:
   LRESULT OnClose(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnSize(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
+  LRESULT OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
   LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
                          BOOL &bHandle);
