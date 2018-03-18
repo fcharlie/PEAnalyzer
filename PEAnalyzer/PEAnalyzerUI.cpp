@@ -479,6 +479,11 @@ LRESULT MetroWindow::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
     return FALSE;
   }
   dpi_->SetScale(dpix);
+  RECT *const prcNewWindow = (RECT *)lParam;
+  ::SetWindowPos(m_hWnd, NULL, prcNewWindow->left, prcNewWindow->top,
+                 dpi_->Scale(prcNewWindow->right - prcNewWindow->left),
+                 dpi_->Scale(prcNewWindow->bottom - prcNewWindow->top),
+                 SWP_NOZORDER | SWP_NOACTIVATE);
   LOGFONTW logFont = {0};
   GetObjectW(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
