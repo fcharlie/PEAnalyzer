@@ -592,8 +592,10 @@ LRESULT MetroWindow::DiscoverIMAGEButtonActive(const wchar_t *debugMessage) {
 LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file) {
   item_.clear();
   std::wstring rfile;
-  if(!Readlink(file,rfile)){
-	rfile=file;
+  if (!Readlink(file, rfile)) {
+    rfile = file;
+  } else {
+    ::SetWindowTextW(::GetDlgItem(m_hWnd, IDC_IMAGE_URI_EDIT), rfile.c_str());
   }
   PortableExecutableFile portableExecuteFile(rfile);
   if (!portableExecuteFile.Analyzer())
