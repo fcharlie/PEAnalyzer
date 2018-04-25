@@ -591,7 +591,11 @@ LRESULT MetroWindow::DiscoverIMAGEButtonActive(const wchar_t *debugMessage) {
 
 LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file) {
   item_.clear();
-  PortableExecutableFile portableExecuteFile(file);
+  std::wstring rfile;
+  if(!Readlink(file,rfile)){
+	rfile=file;
+  }
+  PortableExecutableFile portableExecuteFile(rfile);
   if (!portableExecuteFile.Analyzer())
     return S_FALSE;
   MetroTextItem signature = {

@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <winnt.h>
+#include <winioctl.h>
 ///
 #include "PortableExecutableFile.h"
 #pragma comment(lib, "DbgHelp.lib")
@@ -21,6 +22,137 @@ inline std::wstring to_utf16(const std::string_view &s) {
   output.resize(size - 1);
   MultiByteToWideChar(CP_UTF8, 0, s.data(), -1, output.data(), size - 1);
   return output;
+}
+
+class ErrorMessage {
+public:
+  ErrorMessage(DWORD errid) : lastError(errid) {
+    if (FormatMessageW(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+            nullptr, errid, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL),
+            (LPWSTR)&buf, 0, nullptr) == 0) {
+      buf = nullptr;
+    }
+  }
+  ~ErrorMessage() {
+    if (buf != nullptr) {
+      LocalFree(buf);
+    }
+  }
+  const wchar_t *message() const { return buf == nullptr ? L"unknwon" : buf; }
+  DWORD LastError() const { return lastError; }
+
+private:
+  DWORD lastError;
+  LPWSTR buf{nullptr};
+};
+
+struct ReparseBuffer {
+  ReparseBuffer() {
+    data = reinterpret_cast<REPARSE_DATA_BUFFER *>(
+        malloc(MAXIMUM_REPARSE_DATA_BUFFER_SIZE));
+  }
+  ~ReparseBuffer() {
+    if (data != nullptr) {
+      free(data);
+    }
+  }
+  REPARSE_DATA_BUFFER *data{nullptr};
+};
+
+bool Readlink(const std::wstring &symfile, std::wstring &realfile) {
+  auto hFile = CreateFileW(
+      symfile.c_str(), 0,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+      NULL);
+  if (hFile == INVALID_HANDLE_VALUE) {
+    ErrorMessage err(GetLastError());
+    fwprintf(stderr, L"CreateFileW: %s\n", err.message());
+    return false;
+  }
+  ReparseBuffer rbuf;
+  DWORD dwBytes = 0;
+  if (DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nullptr, 0, rbuf.data,
+                      MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &dwBytes,
+                      nullptr) != TRUE) {
+    ErrorMessage err(GetLastError());
+    fwprintf(stderr, L"DeviceIoControl: %s\n", err.message());
+    CloseHandle(hFile);
+    return false;
+  }
+  CloseHandle(hFile);
+  switch (rbuf.data->ReparseTag) {
+  case IO_REPARSE_TAG_SYMLINK: {
+    auto wstr = rbuf.data->SymbolicLinkReparseBuffer.PathBuffer +
+                (rbuf.data->SymbolicLinkReparseBuffer.SubstituteNameOffset /
+                 sizeof(WCHAR));
+    auto wlen = rbuf.data->SymbolicLinkReparseBuffer.SubstituteNameLength /
+                sizeof(WCHAR);
+    if (wlen >= 4 && wstr[0] == L'\\' && wstr[1] == L'?' && wstr[2] == L'?' &&
+        wstr[3] == L'\\') {
+      /* Starts with \??\ */
+      if (wlen >= 6 &&
+          ((wstr[4] >= L'A' && wstr[4] <= L'Z') ||
+           (wstr[4] >= L'a' && wstr[4] <= L'z')) &&
+          wstr[5] == L':' && (wlen == 6 || wstr[6] == L'\\')) {
+        /* \??\<drive>:\ */
+        wstr += 4;
+        wlen -= 4;
+
+      } else if (wlen >= 8 && (wstr[4] == L'U' || wstr[4] == L'u') &&
+                 (wstr[5] == L'N' || wstr[5] == L'n') &&
+                 (wstr[6] == L'C' || wstr[6] == L'c') && wstr[7] == L'\\') {
+        /* \??\UNC\<server>\<share>\ - make sure the final path looks like */
+        /* \\<server>\<share>\ */
+        wstr += 6;
+        wstr[0] = L'\\';
+        wlen -= 6;
+      }
+    }
+    realfile.assign(wstr, wlen);
+  } break;
+  case IO_REPARSE_TAG_MOUNT_POINT: {
+    auto wstr = rbuf.data->MountPointReparseBuffer.PathBuffer +
+                (rbuf.data->MountPointReparseBuffer.SubstituteNameOffset /
+                 sizeof(WCHAR));
+    auto wlen =
+        rbuf.data->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+    /* Only treat junctions that look like \??\<drive>:\ as symlink. */
+    /* Junctions can also be used as mount points, like \??\Volume{<guid>}, */
+    /* but that's confusing for programs since they wouldn't be able to */
+    /* actually understand such a path when returned by uv_readlink(). */
+    /* UNC paths are never valid for junctions so we don't care about them. */
+    if (!(wlen >= 6 && wstr[0] == L'\\' && wstr[1] == L'?' && wstr[2] == L'?' &&
+          wstr[3] == L'\\' &&
+          ((wstr[4] >= L'A' && wstr[4] <= L'Z') ||
+           (wstr[4] >= L'a' && wstr[4] <= L'z')) &&
+          wstr[5] == L':' && (wlen == 6 || wstr[6] == L'\\'))) {
+      SetLastError(ERROR_SYMLINK_NOT_SUPPORTED);
+      return false;
+    }
+
+    /* Remove leading \??\ */
+    wstr += 4;
+    wlen -= 4;
+    realfile.assign(wstr, wlen);
+  } break;
+  case IO_REPARSE_TAG_APPEXECLINK: {
+    if (rbuf.data->AppExecLinkReparseBuffer.StringCount != 0) {
+      LPWSTR szString = (LPWSTR)rbuf.data->AppExecLinkReparseBuffer.StringList;
+      for (ULONG i = 0; i < rbuf.data->AppExecLinkReparseBuffer.StringCount;
+           i++) {
+        if (i == 2) {
+          realfile = szString;
+        }
+        szString += wcslen(szString) + 1;
+      }
+    }
+  } break;
+  default:
+    return false;
+  }
+  return true;
 }
 
 struct VALUE_STRING {
