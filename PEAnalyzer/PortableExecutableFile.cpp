@@ -64,9 +64,9 @@ struct ReparseBuffer {
   REPARSE_DATA_BUFFER *data{nullptr};
 };
 
-int GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
+HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
                               wchar_t *szTargetPath, DWORD bufLen) {
-  int rc = 0;
+  HRESULT rc = S_OK;
   HANDLE hFile = nullptr;
   HANDLE hMapFile = nullptr;
   UCHAR *buf = nullptr;
