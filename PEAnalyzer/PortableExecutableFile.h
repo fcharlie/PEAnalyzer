@@ -205,7 +205,19 @@ private:
   int64_t filesize{0};
   bool ismaped{false};
 };
+
+template <typename CharT>
+bool EndsWith(const std::basic_string<CharT> &str, const CharT *cstr,
+              size_t len) {
+  if (str.size() < len) {
+    return false;
+  }
+  return str.compare(str.size() - len, len, cstr) == 0;
+}
+
+bool ReadShellLink(const std::wstring &shlink, std::wstring &target);
 bool Readlink(const std::wstring &symfile, std::wstring &realfile);
+
 class PortableExecutableFile {
 private:
   std::wstring mPath_;

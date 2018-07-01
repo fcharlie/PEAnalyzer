@@ -7,6 +7,8 @@
 #include <string_view>
 #include <winnt.h>
 #include <winioctl.h>
+#include <ShlObj.h>
+#include <PathCch.h>
 ///
 #include "PortableExecutableFile.h"
 #pragma comment(lib, "DbgHelp.lib")
@@ -39,7 +41,9 @@ public:
       LocalFree(buf);
     }
   }
-  const wchar_t *message() const { return buf == nullptr ? L"unknwon" : buf; }
+  const wchar_t *message() const {
+    return buf == nullptr ? L"unknwon" : buf;
+  }
   DWORD LastError() const { return lastError; }
 
 private:
@@ -60,12 +64,117 @@ struct ReparseBuffer {
   REPARSE_DATA_BUFFER *data{nullptr};
 };
 
+int GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
+                              wchar_t *szTargetPath, DWORD bufLen) {
+  int rc = 0;
+  HANDLE hFile = nullptr;
+  HANDLE hMapFile = nullptr;
+  UCHAR *buf = nullptr;
+
+  // zero target path
+  memset(szTargetPath, 0, bufLen * sizeof(wchar_t));
+
+  // open shortcut file
+  hFile = CreateFileW(szShortcutFile, GENERIC_READ,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (hFile == INVALID_HANDLE_VALUE) {
+    rc = 1;
+    goto cleanup;
+  }
+
+  // get file size
+  DWORD dwSize = GetFileSize(hFile, nullptr);
+  // test for files with a length of 0 (zero) and reject those files,
+  // otherwise CreateFileMapping will fail
+  if (dwSize == INVALID_FILE_SIZE || dwSize == 0) {
+    rc = 2;
+    goto cleanup;
+  }
+
+  // create file mapping object
+  hMapFile =
+      CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+  if (hMapFile == nullptr) {
+    rc = 3;
+    goto cleanup;
+  }
+
+  // map view of the file mapping into the address space of our process
+  buf = (UCHAR *)MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
+  if (buf == nullptr) {
+    rc = 4;
+    goto cleanup;
+  }
+
+  // check for LNK file header "4C 00 00 00"
+  if (*(DWORD *)(buf + 0x00) != 0x0000004C) {
+    // LNK file header invalid
+    rc = 5;
+    goto cleanup;
+  }
+
+  // check for shell link GUID "{00021401-0000-0000-00C0-000000000046}"
+  if (*(DWORD *)(buf + 0x04) != 0x00021401 ||
+      *(DWORD *)(buf + 0x08) != 0x00000000 ||
+      *(DWORD *)(buf + 0x0C) != 0x000000C0 ||
+      *(DWORD *)(buf + 0x10) != 0x46000000) {
+    // shell link GUID invalid
+    rc = 6;
+    goto cleanup;
+  }
+
+  // check for presence of shell item ID list
+  if ((*(BYTE *)(buf + 0x14) & 0x01) == 0) {
+    // shell item ID list is not present
+    rc = 7;
+    goto cleanup;
+  }
+
+  // convert shell item identifier list to file system path
+  // the shell item ID list starts always at offset 0x4E after the LNK
+  // file header and the WORD for the length of the item ID list
+  // see the reference "The Windows Shortcut File Format" by "Jesse Hager"
+  if (SHGetPathFromIDListEx((LPCITEMIDLIST)(buf + 0x4E), szTargetPath, bufLen,
+                            GPFIDL_UNCPRINTER) == FALSE) {
+    rc = 8;
+    goto cleanup;
+  }
+
+cleanup:
+  if (buf != nullptr) {
+    UnmapViewOfFile(buf);
+  }
+
+  if (hMapFile != nullptr) {
+    CloseHandle(hMapFile);
+  }
+  if (hFile != nullptr) {
+    CloseHandle(hFile);
+  }
+
+  return rc;
+}
+
+bool ReadShellLink(const std::wstring &shlink, std::wstring &target) {
+  wchar_t buffer[8192];
+  if (GetShortcutTargetPathImpl(shlink.c_str(), buffer, 8192) == S_OK) {
+    target.assign(buffer);
+    auto n = ExpandEnvironmentStringsW(target.c_str(), buffer, 8192);
+    if (n > 0) {
+      target.assign(buffer, n);
+    }
+    return true;
+  }
+  return false;
+}
+
 bool Readlink(const std::wstring &symfile, std::wstring &realfile) {
   auto hFile = CreateFileW(
       symfile.c_str(), 0,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
       OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-      NULL);
+      nullptr);
   if (hFile == INVALID_HANDLE_VALUE) {
     ErrorMessage err(GetLastError());
     fwprintf(stderr, L"CreateFileW: %s\n", err.message());
@@ -402,7 +511,7 @@ public:
   }
 
 private:
-  PVOID OldValue = NULL;
+  PVOID OldValue = nullptr;
 };
 #endif
 
@@ -419,7 +528,7 @@ bool PortableExecutableFile::Analyzer() {
     return false;
   }
   auto dh = reinterpret_cast<IMAGE_DOS_HEADER *>(mv.BaseAddress());
-  if (minsize + dh->e_lfanew >= mv.FileSize()) {
+  if (minsize + dh->e_lfanew >= (uint64_t)mv.FileSize()) {
     return false;
   }
   auto nh =

@@ -589,15 +589,25 @@ LRESULT MetroWindow::DiscoverIMAGEButtonActive(const wchar_t *debugMessage) {
   return S_OK;
 }
 
+// Get File target
+std::wstring GetFileTarget(std::wstring file) {
+  std::wstring target;
+  if (EndsWith(file, L".lnk", 4)) {
+    if (ReadShellLink(file, target)) {
+      file.assign(std::move(target));
+    }
+  }
+  if (Readlink(file, target)) {
+    return target;
+  }
+  return file;
+}
+
 LRESULT MetroWindow::PortableExecutableFileRander(const std::wstring &file) {
   item_.clear();
-  std::wstring rfile;
-  if (!Readlink(file, rfile)) {
-    rfile = file;
-  } else {
-    ::SetWindowTextW(::GetDlgItem(m_hWnd, IDC_IMAGE_URI_EDIT), rfile.c_str());
-  }
-  PortableExecutableFile portableExecuteFile(rfile);
+  auto target = GetFileTarget(file);
+  ::SetWindowTextW(::GetDlgItem(m_hWnd, IDC_IMAGE_URI_EDIT), target.c_str());
+  PortableExecutableFile portableExecuteFile(target);
   if (!portableExecuteFile.Analyzer())
     return S_FALSE;
   MetroTextItem signature = {

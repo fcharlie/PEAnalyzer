@@ -35,7 +35,7 @@ void ReportErrorMessage(LPCWSTR pszFunction, HRESULT hr) {
   }
 }
 bool OpenFileWindow(HWND hParent, std::wstring &filename,
-                          const wchar_t *pszWindowTitle) {
+                    const wchar_t *pszWindowTitle) {
   HRESULT hr;
   bool br = false;
   CComPtr<IFileOpenDialog> pWindow;
