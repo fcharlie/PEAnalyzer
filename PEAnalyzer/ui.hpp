@@ -81,6 +81,7 @@ public:
   LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
                          BOOL &bHandle);
   LRESULT OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
+  bool ResolveLink();
   bool Inquisitive(std::wstring path);
 
 private:

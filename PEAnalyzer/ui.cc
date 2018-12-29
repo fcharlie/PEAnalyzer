@@ -77,6 +77,21 @@ inline std::wstring Content(HWND hWnd) {
   return s;
 }
 
+bool Window::ResolveLink() {
+  auto file = Content(hUri);
+  if (file.empty()) {
+    return false;
+  }
+  base::error_code ec;
+  auto link = resolve::ResolveLink(file, ec);
+  if (!link && ec) {
+    peaz::PeazMessageBox(m_hWnd, L"Resolve Link", ec.message.c_str(), nullptr,
+                         peaz::kFatalWindow);
+    return false;
+  }
+  return Inquisitive(*link);
+}
+
 bool Window::Inquisitive(std::wstring path) {
   //
   base::error_code ec;

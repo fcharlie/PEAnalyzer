@@ -16,7 +16,7 @@ std::optional<std::wstring> ResolveSlink(std::wstring_view sv) {
   peaz::comptr<IShellLinkW> link;
 
   if ((CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER,
-                        IID_IShellLink, (void **)&link)) != S_OK) {
+                        IID_IShellLinkW, (void **)&link)) != S_OK) {
     return std::nullopt;
   }
   peaz::comptr<IPersistFile> pf;
@@ -60,6 +60,7 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
     return std::nullopt;
   }
   CloseHandle(hFile);
+
   auto rbuf = reinterpret_cast<REPARSE_DATA_BUFFER *>(buffer);
   switch (rbuf->ReparseTag) {
   case IO_REPARSE_TAG_SYMLINK: {
@@ -90,7 +91,7 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
       }
     }
     return std::make_optional<std::wstring>(wstr, wlen);
-  } break;
+  }
   case IO_REPARSE_TAG_MOUNT_POINT: {
     auto wstr =
         rbuf->MountPointReparseBuffer.PathBuffer +
@@ -117,7 +118,7 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
     wstr += 4;
     wlen -= 4;
     return std::make_optional<std::wstring>(wstr, wlen);
-  } break;
+  }
   case IO_REPARSE_TAG_APPEXECLINK: {
     if (rbuf->AppExecLinkReparseBuffer.StringCount != 0) {
       LPWSTR szString = (LPWSTR)rbuf->AppExecLinkReparseBuffer.StringList;
@@ -130,7 +131,7 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
     }
   } break;
   default:
-    return std::nullopt;
+    break;
   }
   return std::nullopt;
 }
