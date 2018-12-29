@@ -8,7 +8,7 @@
 #include <commdlg.h>
 ///
 #include "PEAnalyzer.h"
-#include "PEAnalyzerUI.h"
+#include "window.hpp"
 
 class DotComInitialize {
 public:

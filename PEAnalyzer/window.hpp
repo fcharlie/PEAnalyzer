@@ -1,10 +1,6 @@
-//
-//
-//
-//
 
-#ifndef PEANALYZER_UI_H
-#define PEANALYZER_UI_H
+#ifndef PEAZ_WINDOW_HPP
+#define PEAZ_WINDOW_HPP
 
 #include <atlbase.h>
 #include <atlctl.h>

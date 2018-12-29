@@ -149,30 +149,31 @@
   <ItemGroup>
     <ClInclude Include="pe.hpp" />
     <ClInclude Include="PEAnalyzer.h" />
-    <ClInclude Include="PEAnalyzerUI.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="version.h" />
+    <ClInclude Include="window.hpp" />
     <ClInclude Include="PortableExecutableFile.h" />
     <ClInclude Include="reparserpoint.hpp" />
     <ClInclude Include="resolve.hpp" />
-    <ClInclude Include="Resource.h" />
+    <ClInclude Include="peazres.h" />
     <ClInclude Include="base.hpp" />
-    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pe.cc" />
     <ClCompile Include="winmain.cc" />
-    <ClCompile Include="PEAnalyzerUI.cpp" />
+    <ClCompile Include="window.cc" />
     <ClCompile Include="PEFileDiscover.cpp" />
     <ClCompile Include="PortableExecutableFile.cpp" />
     <ClCompile Include="resolve.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="PEAnalyzer.rc" />
+    <ResourceCompile Include="peaz.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="PEAnalyzer.ico" />
+    <Image Include="peaz.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Manifest Include="PEAnalyzer.manifest" />
+    <Manifest Include="app.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

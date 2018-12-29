@@ -8,9 +8,9 @@
 #include <Shlwapi.h>
 #include <d2d1helper.h>
 ////
-#include "PEAnalyzerUI.h"
+#include "window.hpp"
 #include "PortableExecutableFile.h"
-#include "Resource.h"
+#include "peazres.h"
 //#include <exception>
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "ComDlg32.Lib")
