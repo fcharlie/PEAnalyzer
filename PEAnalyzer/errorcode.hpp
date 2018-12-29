@@ -15,14 +15,14 @@
 namespace base {
 struct error_code {
   std::wstring message;
-  long code{S_OK};
-  explicit operator bool() const noexcept { return code != S_OK; }
+  long code{NO_ERROR};
+  explicit operator bool() const noexcept { return code != NO_ERROR; }
 };
 inline error_code make_error_code(int val, std::wstring_view msg) {
   return error_code{std::wstring(msg), val};
 }
 inline error_code make_error_code(std::wstring_view msg) {
-  return error_code{std::wstring(msg), S_FALSE};
+  return error_code{std::wstring(msg), -1};
 }
 inline error_code make_system_error_code() {
   error_code ec;

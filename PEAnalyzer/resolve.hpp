@@ -14,6 +14,7 @@
 #include "errorcode.hpp"
 
 namespace resolve {
+
 std::optional<std::wstring> ResolveLink(std::wstring_view sv,
                                         base::error_code &ec);
 
