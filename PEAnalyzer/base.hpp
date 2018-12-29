@@ -20,15 +20,21 @@
 // Specific header required by the program
 #include <shellscalingapi.h>
 
-template <class T> class RaiiComPtr {
+#include <Shlwapi.h>
+#include <string>
+#include <optional>
+
+namespace peaz {
+
+template <class T> class comptr {
 public:
-  RaiiComPtr() { ptr = NULL; }
-  RaiiComPtr(T *p) {
+  comptr() { ptr = NULL; }
+  comptr(T *p) {
     ptr = p;
     if (ptr != NULL)
       ptr->AddRef();
   }
-  RaiiComPtr(const RaiiComPtr<T> &sptr) {
+  comptr(const comptr<T> &sptr) {
     ptr = sptr.ptr;
     if (ptr != NULL)
       ptr->AddRef();
@@ -58,7 +64,7 @@ public:
                                     (void **)&ptr);
     return hr;
   }
-  ~RaiiComPtr() {
+  ~comptr() {
     if (ptr != NULL)
       ptr->Release();
   }
@@ -66,5 +72,22 @@ public:
 private:
   T *ptr;
 };
+
+enum windowtype_t {
+  // window type
+  kInfoWindow,
+  kWarnWindow,
+  kFatalWindow,
+  kAboutWindow
+};
+
+HRESULT PeazMessageBox(HWND hWnd, LPCWSTR pszWindowTitle, LPCWSTR pszContent,
+                       LPCWSTR pszExpandedInfo, windowtype_t type);
+using filter_t = COMDLG_FILTERSPEC;
+std::optional<std::wstring> PeazFilePicker(HWND hWnd, const wchar_t *title,
+                                           const filter_t *filter,
+                                           uint32_t flen);
+std::optional<std::wstring> PeazFolderPicker(HWND hWnd, const wchar_t *title);
+} // namespace peaz
 
 #endif

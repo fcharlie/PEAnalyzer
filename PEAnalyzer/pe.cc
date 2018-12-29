@@ -1,6 +1,7 @@
 ////
 #include "base.hpp"
 #include "pe.hpp"
+#include <system_error>
 #include <Dbghelp.h>
 
 #pragma comment(lib, "DbgHelp.lib")
@@ -264,7 +265,7 @@ inline std::wstring ClrMessage(memview mv, LPVOID nh, ULONG clrva) {
 
 template <typename NtHeaderT>
 std::optional<pe_minutiae_t> pecoff_dump(memview mv, NtHeaderT *nh,
-                                         std::error_code &ec) {
+                                         base::error_code &ec) {
   pe_minutiae_t pm;
   pm.machine = Machine(nh->FileHeader.Machine);
   pm.characteristics = Characteristics(nh->FileHeader.Characteristics,
@@ -310,19 +311,22 @@ std::optional<pe_minutiae_t> pecoff_dump(memview mv, NtHeaderT *nh,
 }
 
 std::optional<pe_minutiae_t> inquisitive_pecoff(std::wstring_view sv,
-                                                std::error_code &ec) {
+                                                base::error_code &ec) {
 
   mapview mv;
-  if (!mv.mapfile(sv, sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS32))) {
+  ec = mv.mapfile(sv, sizeof(IMAGE_DOS_HEADER) + sizeof(IMAGE_NT_HEADERS32));
+  if (ec) {
     return std::nullopt;
   }
   auto h = mv.cast<IMAGE_DOS_HEADER>(0);
   if (h == nullptr) {
+    ec = base::make_error_code(L"file size too small, cast error");
     return std::nullopt;
   }
   // PE/PE+ lIMAGE_NT_HEADERS32 ayout
   auto nh = mv.cast<IMAGE_NT_HEADERS32>(h->e_lfanew);
   if (nh == nullptr) {
+    ec = base::make_error_code(L"file size too small, cast NT header error");
     return std::nullopt;
   }
   switch (nh->OptionalHeader.Magic) {

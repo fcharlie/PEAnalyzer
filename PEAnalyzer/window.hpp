@@ -19,8 +19,6 @@
 #define IDC_IMAGE_URI_EDIT 1010
 #define IDC_IMAGE_FIND_BUTTON 1011
 
-bool OpenFileWindow(HWND hParent, std::wstring &filename,
-                    const wchar_t *pszWindowTitle);
 
 #define PEANALYZER_UI_MAINWINDOW _T("PEAnalyzer.Render.UI.Window")
 typedef CWinTraits<WS_OVERLAPPEDWINDOW, WS_EX_APPWINDOW | WS_EX_WINDOWEDGE>
@@ -60,6 +58,8 @@ struct MetroButton {
   RECT layout;
   std::wstring caption;
 };
+
+
 class CDPI;
 class MetroWindow
     : public CWindowImpl<MetroWindow, CWindow, CMetroWindowTraits> {

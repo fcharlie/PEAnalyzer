@@ -7,8 +7,14 @@
 #include <VersionHelpers.h>
 #include <commdlg.h>
 ///
-#include "PEAnalyzer.h"
+#include "peazres.h"
 #include "window.hpp"
+
+#pragma comment(lib, "Comctl32.lib")
+#pragma comment(lib, "ComDlg32.Lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
+#pragma comment(lib, "shcore.lib")
 
 class DotComInitialize {
 public:

@@ -13,6 +13,7 @@
 #include <vector>
 #include <optional>
 #include <string_view>
+#include "errorcode.hpp"
 
 #ifndef _M_X64
 class FsDisableRedirection {
@@ -127,8 +128,8 @@ public:
     Close(FileMap);
     Close(FileHandle);
   }
-  bool mapfile(std::wstring_view file, std::size_t minsize = 1,
-               std::size_t maxsize = SIZE_MAX) {
+  base::error_code mapfile(std::wstring_view file, std::size_t minsize = 1,
+                           std::size_t maxsize = SIZE_MAX) {
 #ifndef _M_X64
     FsDisableRedirection fdr;
 #endif
@@ -136,24 +137,28 @@ public:
                                   FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
                                   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
                                   nullptr)) == nullfile_t) {
-      return false;
+      return base::make_system_error_code();
     }
     LARGE_INTEGER li;
-    if (GetFileSizeEx(FileHandle, &li) != TRUE ||
-        (std::size_t)li.QuadPart < minsize) {
-      return false;
+    if (GetFileSizeEx(FileHandle, &li) != TRUE) {
+      return base::make_system_error_code();
+    }
+    if ((std::size_t)li.QuadPart < minsize) {
+      return base::make_error_code(L"filesize too small");
     }
     if ((FileMap = CreateFileMappingW(FileHandle, nullptr, PAGE_READONLY, 0, 0,
                                       nullptr)) == nullfile_t) {
-      return false;
+      return base::make_system_error_code();
+      ;
     }
     size_ = (size_t)li.QuadPart > maxsize ? maxsize : (size_t)li.QuadPart;
     auto baseAddr = MapViewOfFile(FileMap, FILE_MAP_READ, 0, 0, size_);
     if (baseAddr == nullptr) {
-      return false;
+      return base::make_system_error_code();
+      ;
     }
     data_ = reinterpret_cast<char *>(baseAddr);
-    return true;
+    return base::error_code{};
   }
   std::size_t size() const { return size_; }
   const char *data() const { return data_; }
@@ -216,7 +221,8 @@ struct pe_minutiae_t {
   pe_version_t imagever;
   bool isdll;
 };
-
+std::optional<pe_minutiae_t> inquisitive_pecoff(std::wstring_view sv,
+                                                base::error_code &ec);
 } // namespace pecoff
 
 #endif

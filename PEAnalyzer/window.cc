@@ -12,11 +12,6 @@
 #include "PortableExecutableFile.h"
 #include "peazres.h"
 //#include <exception>
-#pragma comment(lib, "Comctl32.lib")
-#pragma comment(lib, "ComDlg32.Lib")
-#pragma comment(lib, "d2d1.lib")
-#pragma comment(lib, "dwrite.lib")
-#pragma comment(lib, "shcore.lib")
 
 #ifndef HINST_THISCOMPONENT
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
@@ -577,12 +572,21 @@ LRESULT MetroWindow::OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam,
 }
 
 LRESULT MetroWindow::DiscoverIMAGEButtonActive(const wchar_t *debugMessage) {
-  std::wstring pefile;
-  if (OpenFileWindow(m_hWnd, pefile, L"Found PE File")) {
-    ::SetWindowTextW(hEdit, pefile.c_str());
-    if (PortableExecutableFileRander(pefile) != S_OK) {
-      ::MessageBoxW(m_hWnd, pefile.c_str(), L"Cannot analyzer this file",
-                    MB_OK | MB_ICONSTOP);
+  constexpr const wchar_t *ei = L"Ask for help with this issue. \nVisit: <a "
+                                L"href=\"https://github.com/fcharlie/"
+                                L"PEAnalyzer/issues\">PEAnalyzer Issues</a>";
+  const peaz::filter_t filters[] = {
+      {L"Windows  Execute File (*.exe;*.com;*.dll;*.sys)",
+       L"*.exe;*.com;*.dll;*.sys"},
+      {L"Windows Other File (*.scr;*.fon;*.drv)", L"*.scr;*.fon;*.drv"},
+      {L"All Files (*.*)", L"*.*"}};
+  auto file = peaz::PeazFilePicker(m_hWnd, L"Find PE images", filters,
+                                   ARRAYSIZE(filters));
+  if (file) {
+    ::SetWindowTextW(hEdit, file->c_str());
+    if (PortableExecutableFileRander(*file) != S_OK) {
+      peaz::PeazMessageBox(m_hWnd, L"Unable analyze this file", file->c_str(),
+                           ei, peaz::kFatalWindow);
       return S_FALSE;
     }
   }

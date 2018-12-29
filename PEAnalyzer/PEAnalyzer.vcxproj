@@ -147,9 +147,11 @@
     <Text Include="ReadMe.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="errorcode.hpp" />
+    <ClInclude Include="hdpi.hpp" />
     <ClInclude Include="pe.hpp" />
-    <ClInclude Include="PEAnalyzer.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="ui.hpp" />
     <ClInclude Include="version.h" />
     <ClInclude Include="window.hpp" />
     <ClInclude Include="PortableExecutableFile.h" />
@@ -160,9 +162,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pe.cc" />
+    <ClCompile Include="ui.cc" />
+    <ClCompile Include="uievent.cc" />
+    <ClCompile Include="uirender.cc" />
     <ClCompile Include="winmain.cc" />
     <ClCompile Include="window.cc" />
-    <ClCompile Include="PEFileDiscover.cpp" />
+    <ClCompile Include="peazutils.cc" />
     <ClCompile Include="PortableExecutableFile.cpp" />
     <ClCompile Include="resolve.cc" />
   </ItemGroup>

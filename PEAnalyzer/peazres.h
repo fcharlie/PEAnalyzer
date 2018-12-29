@@ -14,6 +14,8 @@
 #define IDI_SMALL 1008
 #define IDC_PEANALYZER 1009
 
+#define IDC_IMAGE_URI_EDIT 2001
+
 #define IDC_MYICON 2
 #ifndef IDC_STATIC
 #define IDC_STATIC -1
