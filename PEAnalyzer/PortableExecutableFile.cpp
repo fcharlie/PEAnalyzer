@@ -1,7 +1,7 @@
 /**
  **/
 
-#include "stdafx.h"
+#include "base.hpp"
 #include <Dbghelp.h>
 #include <string>
 #include <string_view>
@@ -41,9 +41,7 @@ public:
       LocalFree(buf);
     }
   }
-  const wchar_t *message() const {
-    return buf == nullptr ? L"unknwon" : buf;
-  }
+  const wchar_t *message() const { return buf == nullptr ? L"unknwon" : buf; }
   DWORD LastError() const { return lastError; }
 
 private:
@@ -64,9 +62,9 @@ struct ReparseBuffer {
   REPARSE_DATA_BUFFER *data{nullptr};
 };
 
-HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
-                              wchar_t *szTargetPath, DWORD bufLen) {
-  HRESULT rc = S_OK;
+DWORD GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
+                                wchar_t *szTargetPath, DWORD bufLen) {
+  DWORD rc = 0;
   HANDLE hFile = nullptr;
   HANDLE hMapFile = nullptr;
   UCHAR *buf = nullptr;
@@ -79,7 +77,7 @@ HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
                       FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
   if (hFile == INVALID_HANDLE_VALUE) {
-    rc = 1;
+    rc = GetLastError();
     goto cleanup;
   }
 
@@ -88,29 +86,28 @@ HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
   // test for files with a length of 0 (zero) and reject those files,
   // otherwise CreateFileMapping will fail
   if (dwSize == INVALID_FILE_SIZE || dwSize == 0) {
-    rc = 2;
+    rc = INVALID_FILE_SIZE;
     goto cleanup;
   }
 
   // create file mapping object
-  hMapFile =
-      CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+  hMapFile = CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
   if (hMapFile == nullptr) {
-    rc = 3;
+    rc = GetLastError();
     goto cleanup;
   }
 
   // map view of the file mapping into the address space of our process
   buf = (UCHAR *)MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
   if (buf == nullptr) {
-    rc = 4;
+    rc = GetLastError();
     goto cleanup;
   }
 
   // check for LNK file header "4C 00 00 00"
   if (*(DWORD *)(buf + 0x00) != 0x0000004C) {
     // LNK file header invalid
-    rc = 5;
+    rc = 1;
     goto cleanup;
   }
 
@@ -120,14 +117,14 @@ HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
       *(DWORD *)(buf + 0x0C) != 0x000000C0 ||
       *(DWORD *)(buf + 0x10) != 0x46000000) {
     // shell link GUID invalid
-    rc = 6;
+    rc = 1;
     goto cleanup;
   }
 
   // check for presence of shell item ID list
   if ((*(BYTE *)(buf + 0x14) & 0x01) == 0) {
     // shell item ID list is not present
-    rc = 7;
+    rc = 1;
     goto cleanup;
   }
 
@@ -135,9 +132,10 @@ HRESULT GetShortcutTargetPathImpl(const wchar_t *szShortcutFile,
   // the shell item ID list starts always at offset 0x4E after the LNK
   // file header and the WORD for the length of the item ID list
   // see the reference "The Windows Shortcut File Format" by "Jesse Hager"
-  if (SHGetPathFromIDListEx((LPCITEMIDLIST)(buf + 0x4E), szTargetPath, bufLen,
-                            GPFIDL_UNCPRINTER) == FALSE) {
-    rc = 8;
+  auto item = (LPCITEMIDLIST)(buf + 0x4E);
+  if (SHGetPathFromIDListEx(item, szTargetPath, bufLen, GPFIDL_UNCPRINTER) ==
+      FALSE) {
+    rc = 1;
     goto cleanup;
   }
 
@@ -158,7 +156,7 @@ cleanup:
 
 bool ReadShellLink(const std::wstring &shlink, std::wstring &target) {
   wchar_t buffer[8192];
-  if (GetShortcutTargetPathImpl(shlink.c_str(), buffer, 8192) == S_OK) {
+  if (GetShortcutTargetPathImpl(shlink.c_str(), buffer, 8192) == 0) {
     target.assign(buffer);
     auto n = ExpandEnvironmentStringsW(target.c_str(), buffer, 8192);
     if (n > 0) {
