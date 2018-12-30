@@ -66,6 +66,23 @@ bool Window::InitializeWindow() {
   return true;
 }
 
+bool Window::ResolveLink(std::wstring file) {
+  if (file.empty()) {
+    return false;
+  }
+  base::error_code ec;
+  auto link = resolve::ResolveLink(file, ec);
+  if (ec) {
+    peaz::PeazMessageBox(m_hWnd, L"Resolve Link", ec.message.c_str(), nullptr,
+                         peaz::kFatalWindow);
+    return false;
+  }
+  if (link) {
+    ::SetWindowTextW(hUri, link->c_str());
+  }
+  return Inquisitive();
+}
+
 inline std::wstring Content(HWND hWnd) {
   auto l = GetWindowTextLengthW(hWnd);
   if (l == 0 || l > PATHCCH_MAX_CCH) {
@@ -77,23 +94,9 @@ inline std::wstring Content(HWND hWnd) {
   return s;
 }
 
-bool Window::ResolveLink() {
-  auto file = Content(hUri);
-  if (file.empty()) {
-    return false;
-  }
-  base::error_code ec;
-  auto link = resolve::ResolveLink(file, ec);
-  if (!link && ec) {
-    peaz::PeazMessageBox(m_hWnd, L"Resolve Link", ec.message.c_str(), nullptr,
-                         peaz::kFatalWindow);
-    return false;
-  }
-  return Inquisitive(*link);
-}
-
-bool Window::Inquisitive(std::wstring path) {
+bool Window::Inquisitive() {
   //
+  auto path = Content(hUri);
   base::error_code ec;
   auto em = pecoff::inquisitive_pecoff(path, ec);
   return true;
