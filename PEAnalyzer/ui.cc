@@ -10,22 +10,10 @@
 #endif
 
 namespace ui {
-static inline int Year() {
-  SYSTEMTIME stime;
-  GetSystemTime(&stime);
-  return stime.wYear;
-}
 
 Window::Window() {
   // set hdpi
   hdpi.SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-
-  // Initialize Labels
-  labels.emplace_back(L"PE:", 20, 40, 120, 65); /// Copyrigth
-  std::wstring s(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ");
-  pecoff::Integer_append_chars(Year(), 10, s);
-  s.append(L". Force Charlie. All Rights Reserved.");
-  labels.emplace_back(s, 80, 345, 540, 370);
 }
 
 Window::~Window() {

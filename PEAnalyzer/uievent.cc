@@ -1,6 +1,7 @@
 ///////////
 #include "ui.hpp"
 #include "peazres.h"
+#include "charconv.hpp"
 
 #ifndef HINST_THISCOMPONENT
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
@@ -8,6 +9,12 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #endif
 
 namespace ui {
+
+static inline int Year() {
+  SYSTEMTIME stime;
+  GetSystemTime(&stime);
+  return stime.wYear;
+}
 LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
                          BOOL &bHandle) {
   HICON hIcon =
@@ -18,6 +25,15 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   ChangeWindowMessageFilter(WM_COPYDATA, MSGFLT_ADD);
   ChangeWindowMessageFilter(0x0049, MSGFLT_ADD);
   ::DragAcceptFiles(m_hWnd, TRUE);
+
+  // Initialize Labels
+  labels.emplace_back(L"PE:", 20, 40, 120, 65); /// Copyrigth
+  std::wstring s(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ");
+  base::Integer_append_chars(Year(), 10, s);
+  s.append(L". Force Charlie. All Rights Reserved.");
+  labels.emplace_back(s, 80, 345, 540, 370);
+
+  // Create Controls
   hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
   LOGFONT logFont = {0};
   GetObjectW(hFont, sizeof(logFont), &logFont);

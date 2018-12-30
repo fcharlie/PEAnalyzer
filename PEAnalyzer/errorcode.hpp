@@ -44,6 +44,7 @@ inline error_code make_system_error_code() {
   ec.message = system_error_dump(ec.code);
   return ec;
 }
+
 } // namespace base
 
 #endif
