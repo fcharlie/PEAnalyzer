@@ -321,8 +321,7 @@ struct pe_version_t {
   uint16_t minor{0};
   std::wstring strversion() {
     auto sver = Integer_to_chars(major, 10).append(L".");
-    if (Integer_append_chars(minor, 10, sver)) {
-    }
+    Integer_append_chars(minor, 10, sver);
     return sver;
   }
 };

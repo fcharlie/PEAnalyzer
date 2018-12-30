@@ -5,8 +5,8 @@
 #include <atlbase.h>
 #include <atlctl.h>
 #include <atlwin.h>
-#include <d2d1_2.h>
-#include <dwrite_2.h>
+#include <d2d1_3.h>
+#include <dwrite_3.h>
 #include <wincodec.h>
 #include <functional>
 #include <string>
@@ -30,10 +30,24 @@ struct AttributesMultiTable {
   std::vector<std::wstring> values;
 };
 
+struct Label {
+  Label() = default;
+  Label(std::wstring_view sv, LONG left, LONG top, LONG right, LONG bottom)
+      : content(sv) {
+    mlayout = D2D1::RectF((float)left, (float)top, (float)right, (float)bottom);
+  }
+  const wchar_t *data() const { return content.data(); }
+  uint32_t length() const { return static_cast<uint32_t>(content.size()); }
+  D2D_RECT_F layout() const { return mlayout; }
+  std::wstring content;
+  D2D1_RECT_F mlayout;
+};
+
 struct AttributesTables {
   std::vector<AttributesTable> ats;
   std::vector<AttributesMultiTable> amts;
   std::size_t mnlen{0};
+  bool Empty() const { return ats.empty() && amts.empty(); }
   AttributesTables &Clear() {
     mnlen = 0;
     ats.clear();
@@ -61,25 +75,21 @@ struct AttributesTables {
   }
 };
 
-struct D2DButton {
-  enum : int {
-    MouseLeave, //
-    MouseNear,
-    KeyDown,
-    KeyUp
-  };
-  using invoke_t = std::function<void(void *)>;
-  std::wstring text;
-  RECT layout;
-  D2D1::ColorF color;
-  ID2D1HwndRenderTarget *render{nullptr};
-  void Draw() {
-    if (render == nullptr) {
-      return;
-    }
-    // render->DrawRectangle(D2D1::RectF);
+template <class I> inline void Release(I **p) {
+  if (*p != nullptr) {
+    (*p)->Release();
+    (*p) = nullptr;
   }
-  int status{0};
+}
+
+// use raii
+class AutoVisible {
+public:
+  AutoVisible(HWND hWnd) : hWnd_(hWnd) { EnableWindow(hWnd_, FALSE); }
+  ~AutoVisible() { EnableWindow(hWnd_, TRUE); }
+
+private:
+  HWND hWnd_;
 };
 
 class Window : public CWindowImpl<Window, CWindow, WindowTraits> {
@@ -113,18 +123,36 @@ public:
   LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
                          BOOL &bHandle);
   LRESULT OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
+
+protected:
+  HRESULT CreateDeviceIndependentResources();
+  HRESULT Initialize();
+  HRESULT CreateDeviceResources();
+  void DiscardDeviceResources();
+  HRESULT OnRender();
+  void AttributesTablesDraw();
+  D2D1_SIZE_U CalculateD2DWindowSize();
+  void OnResize(UINT width, UINT height);
+  /// Feature
   bool ResolveLink(std::wstring file);
   bool Inquisitive();
 
 private:
   ID2D1Factory2 *factory{nullptr};
-  ID2D1RenderTarget *render{nullptr};
-  ID2D1Device *device{nullptr};
-  ID2D1DeviceContext *devctx{nullptr};
+  ID2D1HwndRenderTarget *render{nullptr};
+  IDWriteFactory5 *wfactory{nullptr}; /// only u
+  IDWriteTextFormat3 *wfmt{nullptr};
+
+  /// AttributesTable text brush
+  ID2D1SolidColorBrush *textbrush{nullptr};
+  //// AttributesTable streak brush
+  ID2D1SolidColorBrush *streaksbrush{nullptr};
   HWND hUri;
+  HWND hClick;
   HFONT hFont{nullptr};
   HDPI hdpi;
   AttributesTables tables;
+  std::vector<Label> labels;
 };
 
 } // namespace ui

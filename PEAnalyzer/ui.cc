@@ -10,20 +10,28 @@
 #endif
 
 namespace ui {
+static inline int Year() {
+  SYSTEMTIME stime;
+  GetSystemTime(&stime);
+  return stime.wYear;
+}
 
 Window::Window() {
   // set hdpi
   hdpi.SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-}
-template <class I> inline void Release(I **p) {
-  if (*p != NULL) {
-    (*p)->Release();
-    (*p) = NULL;
-  }
+
+  // Initialize Labels
+  labels.emplace_back(L"PE:", 20, 40, 120, 65); /// Copyrigth
+  std::wstring s(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ");
+  pecoff::Integer_append_chars(Year(), 10, s);
+  s.append(L". Force Charlie. All Rights Reserved.");
+  labels.emplace_back(s, 80, 345, 540, 370);
 }
 
 Window::~Window() {
   // Release all resources
+  Release(&wfmt);
+  Release(&wfactory);
   Release(&render);
   Release(&factory);
   if (hFont != nullptr) {
@@ -96,6 +104,7 @@ inline std::wstring Content(HWND hWnd) {
 
 bool Window::Inquisitive() {
   //
+  tables.Clear();
   auto path = Content(hUri);
   base::error_code ec;
   auto em = pecoff::inquisitive_pecoff(path, ec);

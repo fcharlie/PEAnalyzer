@@ -3,6 +3,9 @@
 // Used by PEAnalyzer.rc
 //
 
+#ifndef PEAZRES_H
+#define PEAZRES_H
+
 #define IDS_APP_TITLE 1001
 
 #define IDR_MAINFRAME 2001
@@ -15,6 +18,8 @@
 #define IDC_PEANALYZER 1009
 
 #define IDC_IMAGE_URI_EDIT 2001
+#define IDB_IMAGE_FIND_BUTTON 2002
+
 
 #define IDC_MYICON 2
 #ifndef IDC_STATIC
@@ -31,4 +36,6 @@
 #define _APS_NEXT_CONTROL_VALUE 1000
 #define _APS_NEXT_SYMED_VALUE 110
 #endif
+#endif
+
 #endif

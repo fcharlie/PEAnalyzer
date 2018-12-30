@@ -28,16 +28,23 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
 
-  constexpr const auto editstyleex = WS_EX_LEFT | WS_EX_LTRREADING |
-                                     WS_EX_RIGHTSCROLLBAR |
-                                     WS_EX_NOPARENTNOTIFY | WS_EX_CLIENTEDGE;
-  constexpr const auto editstyle = WS_CHILDWINDOW | WS_CLIPSIBLINGS |
-                                   WS_VISIBLE | WS_TABSTOP | ES_LEFT |
-                                   ES_AUTOHSCROLL;
-  hUri = ::CreateWindowExW(editstyleex, WC_EDITW, L"", editstyle,
-                           hdpi.Scale(80), hdpi.Scale(40), hdpi.Scale(360),
-                           hdpi.Scale(27), m_hWnd, HMENU(IDC_IMAGE_URI_EDIT),
+  constexpr const auto eex = WS_EX_LEFT | WS_EX_LTRREADING |
+                             WS_EX_RIGHTSCROLLBAR | WS_EX_NOPARENTNOTIFY |
+                             WS_EX_CLIENTEDGE;
+  constexpr const auto es = WS_CHILDWINDOW | WS_CLIPSIBLINGS | WS_VISIBLE |
+                            WS_TABSTOP | ES_LEFT | ES_AUTOHSCROLL;
+  constexpr const auto bex = WS_EX_LEFT | WS_EX_LTRREADING |
+                             WS_EX_RIGHTSCROLLBAR | WS_EX_NOPARENTNOTIFY;
+  constexpr const auto bs =
+      BS_PUSHBUTTON | BS_TEXT | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE;
+  hUri = ::CreateWindowExW(eex, WC_EDITW, L"", es, hdpi.Scale(80),
+                           hdpi.Scale(40), hdpi.Scale(360), hdpi.Scale(27),
+                           m_hWnd, HMENU(IDC_IMAGE_URI_EDIT),
                            HINST_THISCOMPONENT, nullptr);
+  hClick = ::CreateWindowExW(bex, WC_BUTTONW, L"...", bs, hdpi.Scale(200),
+                             hdpi.Scale(40), hdpi.Scale(40), hdpi.Scale(27),
+                             m_hWnd, HMENU(IDB_IMAGE_FIND_BUTTON),
+                             HINST_THISCOMPONENT, nullptr);
   return S_OK;
 }
 LRESULT Window::OnDestroy(UINT nMsg, WPARAM wParam, LPARAM lParam,

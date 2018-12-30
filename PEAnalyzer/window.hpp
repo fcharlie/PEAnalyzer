@@ -16,8 +16,6 @@
 #include <vector>
 #include <wincodec.h>
 
-#define IDC_IMAGE_URI_EDIT 1010
-#define IDC_IMAGE_FIND_BUTTON 1011
 
 
 #define PEANALYZER_UI_MAINWINDOW _T("PEAnalyzer.Render.UI.Window")

@@ -24,20 +24,24 @@ inline error_code make_error_code(int val, std::wstring_view msg) {
 inline error_code make_error_code(std::wstring_view msg) {
   return error_code{std::wstring(msg), -1};
 }
+
+inline std::wstring system_error_dump(DWORD ec) {
+  LPWSTR buf = nullptr;
+  auto rl = FormatMessageW(
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER, nullptr, ec,
+      MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), (LPWSTR)&buf, 0, nullptr);
+  if (rl == 0) {
+    return L"FormatMessageW error";
+  }
+  std::wstring msg(buf, rl);
+  LocalFree(buf);
+  return msg;
+}
+
 inline error_code make_system_error_code() {
   error_code ec;
   ec.code = GetLastError();
-  LPWSTR buf = nullptr;
-  auto rl = FormatMessageW(
-      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER, nullptr,
-      ec.code, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), (LPWSTR)&buf, 0,
-      nullptr);
-  if (rl == 0) {
-    ec.message = L"FormatMessageW error";
-    return ec;
-  }
-  ec.message.assign(buf, rl);
-  LocalFree(buf);
+  ec.message = system_error_dump(ec.code);
   return ec;
 }
 } // namespace base
