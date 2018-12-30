@@ -11,6 +11,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <wincodec.h>
 #include "hdpi.hpp"
 
@@ -24,9 +25,40 @@ struct AttributesTable {
   std::wstring value;
 };
 
-struct AttributesTableEx {
+struct AttributesMultiTable {
   std::wstring name;
   std::vector<std::wstring> values;
+};
+
+struct AttributesTables {
+  std::vector<AttributesTable> ats;
+  std::vector<AttributesMultiTable> amts;
+  std::size_t mnlen{0};
+  AttributesTables &Clear() {
+    mnlen = 0;
+    ats.clear();
+    amts.clear();
+    return *this;
+  }
+  AttributesTables &Append(std::wstring_view name, std::wstring &&value) {
+    mnlen = (std::max)(mnlen, name.size());
+    ats.emplace_back(AttributesTable{std::wstring(name), std::move(value)});
+    return *this;
+  }
+  AttributesTables &Append(std::wstring_view name, std::wstring_view value) {
+    mnlen = (std::max)(mnlen, name.size());
+    ats.emplace_back(AttributesTable{std::wstring(name), std::wstring(value)});
+    return *this;
+  }
+  AttributesTables &Append(std::wstring_view name,
+                           const std::vector<std::wstring> &value) {
+    mnlen = (std::max)(mnlen, name.size());
+    AttributesMultiTable amt;
+    amt.name = name;
+    amt.values.assign(value.begin(), value.end());
+    amts.push_back(amt);
+    return *this;
+  }
 };
 
 struct D2DButton {
@@ -92,6 +124,7 @@ private:
   HWND hUri;
   HFONT hFont{nullptr};
   HDPI hdpi;
+  AttributesTables tables;
 };
 
 } // namespace ui

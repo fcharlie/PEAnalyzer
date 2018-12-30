@@ -99,6 +99,25 @@ bool Window::Inquisitive() {
   auto path = Content(hUri);
   base::error_code ec;
   auto em = pecoff::inquisitive_pecoff(path, ec);
+  if (ec) {
+    peaz::PeazMessageBox(m_hWnd, L"Inquisitive PE", ec.message.c_str(), nullptr,
+                         peaz::kFatalWindow);
+    return false;
+  }
+  if (!em) {
+    return false;
+  }
+  tables.Append(L"Machine:", em->machine);
+  tables.Append(L"Subsystem:", em->subsystem);
+  tables.Append(L"OS Version:", em->osver.strversion());
+  tables.Append(L"Link Version:", em->linkver.strversion());
+  if (!em->clrmsg.empty()) {
+    tables.Append(L"CLR Version:", em->clrmsg);
+  }
+  tables.Append(L"Characteristics:", em->characteristics);
+  if (!em->depends.empty()) {
+    tables.Append(L"Depends:", em->depends);
+  }
   return true;
 }
 
