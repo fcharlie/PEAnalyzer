@@ -43,7 +43,9 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
-
+  HMENU hSystemMenu = ::GetSystemMenu(m_hWnd, FALSE);
+  InsertMenuW(hSystemMenu, SC_CLOSE, MF_ENABLED, IDM_COMMAND_ABOUT,
+              L"About PE Analyzer\tAlt+F1");
   constexpr const auto eex = WS_EX_LEFT | WS_EX_LTRREADING |
                              WS_EX_RIGHTSCROLLBAR | WS_EX_NOPARENTNOTIFY |
                              WS_EX_CLIENTEDGE;
@@ -74,11 +76,20 @@ LRESULT Window::OnClose(UINT nMsg, WPARAM wParam, LPARAM lParam,
   return S_OK;
 }
 LRESULT Window::OnSize(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle) {
+  UINT width = LOWORD(lParam);
+  UINT height = HIWORD(lParam);
+  OnResize(width, height);
   return S_OK;
 }
 LRESULT Window::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
                         BOOL &bHandle) {
-  return S_OK;
+  LRESULT hr = S_OK;
+  PAINTSTRUCT ps;
+  BeginPaint(&ps);
+  /// if auto return OnRender(),CPU usage is too high
+  hr = OnRender();
+  EndPaint(&ps);
+  return hr;
 }
 LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              BOOL &bHandle) {
@@ -88,12 +99,17 @@ LRESULT Window::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
                             BOOL &bHandled) {
   return S_OK;
 }
-LRESULT Window::OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
-                               BOOL &bHandle) {
+
+LRESULT Window::OnAbout(WORD wNotifyCode, WORD wID, HWND hWndCtl,
+                        BOOL &bHandled) {
+
   return S_OK;
 }
-LRESULT Window::OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam,
-                              BOOL &bHandle) {
+
+LRESULT Window::OnDiscover(WORD wNotifyCode, WORD wID, HWND hWndCtl,
+                           BOOL &bHandled) {
+  //
   return S_OK;
 }
+
 } // namespace ui

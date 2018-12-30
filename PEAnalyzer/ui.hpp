@@ -14,6 +14,17 @@
 #include <algorithm>
 #include <wincodec.h>
 #include "hdpi.hpp"
+#include "peazres.h"
+
+#ifndef SYSCOMMAND_ID_HANDLER
+#define SYSCOMMAND_ID_HANDLER(id, func)                                        \
+  if (uMsg == WM_SYSCOMMAND && id == LOWORD(wParam)) {                         \
+    bHandled = TRUE;                                                           \
+    lResult = func(HIWORD(wParam), LOWORD(wParam), (HWND)lParam, bHandled);    \
+    if (bHandled)                                                              \
+      return TRUE;                                                             \
+  }
+#endif
 
 namespace ui {
 static constexpr const auto wndclassname = L"PEAZ.UI.Render";
@@ -110,8 +121,8 @@ public:
   MESSAGE_HANDLER(WM_PAINT, OnPaint)
   MESSAGE_HANDLER(WM_DPICHANGED, OnDpiChanged);
   MESSAGE_HANDLER(WM_DROPFILES, OnDropfiles)
-  MESSAGE_HANDLER(WM_LBUTTONUP, OnLButtonClick)
-  MESSAGE_HANDLER(WM_LBUTTONDOWN, OnLButtonDown)
+  COMMAND_ID_HANDLER(IDB_IMAGE_FIND_BUTTON, OnDiscover)
+  SYSCOMMAND_ID_HANDLER(IDM_COMMAND_ABOUT, OnAbout)
   END_MSG_MAP()
   LRESULT OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDestroy(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
@@ -120,9 +131,8 @@ public:
   LRESULT OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
-  LRESULT OnLButtonClick(UINT nMsg, WPARAM wParam, LPARAM lParam,
-                         BOOL &bHandle);
-  LRESULT OnLButtonDown(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
+  LRESULT OnDiscover(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
+  LRESULT OnAbout(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
 
 protected:
   HRESULT CreateDeviceIndependentResources();
