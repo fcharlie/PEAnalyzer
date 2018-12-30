@@ -51,6 +51,9 @@
     <ClInclude Include="errorcode.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="charconv.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PortableExecutableFile.cpp">

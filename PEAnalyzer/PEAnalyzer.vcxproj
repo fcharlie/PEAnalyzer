@@ -147,6 +147,7 @@
     <Text Include="ReadMe.md" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="charconv.hpp" />
     <ClInclude Include="errorcode.hpp" />
     <ClInclude Include="hdpi.hpp" />
     <ClInclude Include="pe.hpp" />
