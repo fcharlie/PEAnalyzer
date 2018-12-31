@@ -5,48 +5,114 @@
 #include <winnt.h>
 #include <winioctl.h>
 #include <ShlObj.h>
+#include "shl.hpp"
+#include "pe.hpp"
 
 namespace resolve {
-//
-std::optional<std::wstring> ResolveSlink(std::wstring_view sv) {
-  if (sv.size() < 4 || sv.size() > MAX_PATH ||
-      sv.compare(sv.size() - 4, 4, L".lnk") != 0) {
-    return std::nullopt;
+std::wstring fromascii(std::string_view sv) {
+  auto sz = MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), nullptr, 0);
+  std::wstring output;
+  output.resize(sz);
+  // C++17 must output.data()
+  MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), output.data(), sz);
+  return output;
+}
+std::wstring ResolveAscii(pecoff::memview mv) {
+  std::string s;
+  auto it = mv.data();
+  auto end = it + mv.size();
+  for (; it != end; it++) {
+    if (*it == 0) {
+      break;
+    }
+    s.push_back(*it);
   }
-  peaz::comptr<IShellLinkW> link;
+  return fromascii(s);
+}
 
-  if ((CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER,
-                        IID_IShellLinkW, (void **)&link)) != S_OK) {
+std::wstring ResolveUnicode(pecoff::memview mv) {
+  std::wstring ws;
+  auto it = reinterpret_cast<const wchar_t *>(mv.data());
+  auto end = it + mv.size() / 2;
+  for (; it != end; it++) {
+    if (*it == 0) {
+      break;
+    }
+    ws.push_back(*it);
+  }
+  return ws;
+}
+
+std::optional<std::wstring> ResolveShLink(std::wstring_view sv) {
+  if (sv.size() < 4 || sv.compare(sv.size() - 4, 4, L".lnk") != 0) {
     return std::nullopt;
   }
-  peaz::comptr<IPersistFile> pf;
-  if (link->QueryInterface(IID_IPersistFile, (void **)&pf) != S_OK) {
+  pecoff::mapview mv;
+  auto ec = mv.mapfile(sv, sizeof(shl::shell_link_t), 64 * 1024);
+  if (ec) {
+    MessageBoxW(nullptr, ec.message.c_str(), L"Dump", MB_OK);
     return std::nullopt;
   }
-  if (pf->Load(sv.data(), STGM_READ) != S_OK) {
+  auto x = mv.cast<shl::shell_link_t>(0);
+  //  typedef struct _GUID {
+  //    unsigned long  Data1;
+  //    unsigned short Data2;
+  //    unsigned short Data3;
+  //    unsigned char  Data4[ 8 ];
+  //} GUID;
+  /// uuid {00021401-0000-0000-C000-000000000046} layout is LE
+  constexpr uint8_t shuuid[] = {0x1,  0x14, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
+                                0xc0, 0x0,  0x0,  0x0, 0x0, 0x0, 0x0, 0x46};
+  if (x->dwSize != 0x0000004C ||
+      (x->linkflags & shl::HasLinkTargetIDList) == 0 ||
+      !ArrayEqual(shuuid, x->uuid)) {
+    MessageBoxW(nullptr, L"ss", L"NNNNO", MB_OK);
     return std::nullopt;
   }
-  if (link->Resolve(nullptr, 0) != S_OK) {
+  auto pidlist = mv.cast<uint16_t>(x->dwSize);
+  if (pidlist == nullptr) {
     return std::nullopt;
   }
-  WCHAR szPath[MAX_PATH];
-  WCHAR szFullPath[MAX_PATH];
-  WIN32_FIND_DATA wfd;
-  if (link->GetPath(szPath, MAX_PATH, (WIN32_FIND_DATA *)&wfd,
-                    SLGP_SHORTPATH) == S_OK) {
-    GetLongPathNameW(szPath, szFullPath, ARRAYSIZE(szFullPath));
-    return std::make_optional<std::wstring>(szFullPath);
+  auto offset = *pidlist + x->dwSize + 2;
+  if (offset >= mv.size()) {
+    return std::nullopt;
   }
-  return std::nullopt;
+  /// resolve LinkInfo
+  auto li = mv.cast<shl::link_info_t>(offset);
+  if (li == nullptr || (li->dwFlags & shl::VolumeIDAndLocalBasePath) == 0) {
+    return std::nullopt;
+  }
+  std::wstring ws;
+  if (li->cbHeaderSize >= 0x00000024) {
+    auto xoff = offset + li->cbLocalBasePathOffsetUnicode;
+    if (xoff >= mv.size()) {
+      return std::nullopt;
+    }
+    //// Unicode TODO
+    ws = ResolveUnicode(pecoff::memview(mv.data() + xoff, mv.size() - xoff));
+  } else {
+    auto xoff = offset + li->cbLocalBasePathOffset;
+    if (xoff >= mv.size()) {
+      return std::nullopt;
+    }
+    ws = ResolveAscii(pecoff::memview(mv.data() + xoff, mv.size() - xoff));
+  }
+  if (ws.empty()) {
+    return std::nullopt;
+  }
+  return std::make_optional<std::wstring>(ws);
 }
 
 std::optional<std::wstring> ResolveLink(std::wstring_view sv,
                                         base::error_code &ec) {
-  auto shv = ResolveSlink(sv);
+  auto shv = ResolveShLink(sv);
   std::wstring sfile(sv);
   if (shv) {
     sfile = *shv;
   }
+#ifndef _M_X64
+  FsDisableRedirection fdr;
+#endif
   auto hFile = CreateFileW(
       sfile.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
       nullptr, OPEN_EXISTING,

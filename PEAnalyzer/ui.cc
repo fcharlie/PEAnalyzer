@@ -65,6 +65,7 @@ bool Window::InitializeWindow() {
 }
 
 bool Window::ResolveLink(std::wstring file) {
+  std::lock_guard<std::mutex> lock(mtx);
   tables.Clear();
   Destroy(&hCharacteristics);
   Destroy(&hDepends);

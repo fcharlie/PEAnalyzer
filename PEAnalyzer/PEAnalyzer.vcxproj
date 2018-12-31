@@ -150,6 +150,7 @@
     <ClInclude Include="charconv.hpp" />
     <ClInclude Include="errorcode.hpp" />
     <ClInclude Include="pe.hpp" />
+    <ClInclude Include="shl.hpp" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="ui.hpp" />
     <ClInclude Include="version.h" />

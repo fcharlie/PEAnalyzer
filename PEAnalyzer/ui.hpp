@@ -13,6 +13,7 @@
 #include <vector>
 #include <algorithm>
 #include <wincodec.h>
+#include <mutex>
 #include "peazres.h"
 
 #ifndef HINST_THISCOMPONENT
@@ -194,6 +195,7 @@ private:
   HWND hCharacteristics{nullptr};
   HWND hDepends{nullptr};
   HFONT hFont{nullptr};
+  std::mutex mtx;
   AttributesTables tables;
   std::vector<Label> labels;
   int dpiX;
