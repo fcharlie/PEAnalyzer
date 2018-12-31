@@ -13,8 +13,12 @@
 #include <vector>
 #include <algorithm>
 #include <wincodec.h>
-#include "hdpi.hpp"
 #include "peazres.h"
+
+#ifndef HINST_THISCOMPONENT
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
+#endif
 
 #ifndef SYSCOMMAND_ID_HANDLER
 #define SYSCOMMAND_ID_HANDLER(id, func)                                        \
@@ -39,6 +43,8 @@ struct AttributesTable {
 struct AttributesMultiTable {
   std::wstring name;
   std::vector<std::wstring> values;
+  const wchar_t *Name() const { return name.c_str(); }
+  UINT32 NameLength() const { return static_cast<UINT32>(name.size()); }
 };
 
 struct Label {
@@ -80,16 +86,25 @@ struct AttributesTables {
     mnlen = (std::max)(mnlen, name.size());
     AttributesMultiTable amt;
     amt.name = name;
-    amt.values.assign(value.begin(), value.end());
     amts.push_back(amt);
     return *this;
   }
+  bool HasDepends() const { return amts.size() == 2; }
+  const AttributesMultiTable &Characteristics() { return amts[0]; }
+  const AttributesMultiTable &Depends() { return amts[1]; }
 };
 
 template <class I> inline void Release(I **p) {
   if (*p != nullptr) {
     (*p)->Release();
     (*p) = nullptr;
+  }
+}
+
+template <class T> inline void Destroy(T *h) {
+  if (h != nullptr) {
+    ::DestroyWindow(*h);
+    (*h) = nullptr;
   }
 }
 
@@ -105,7 +120,7 @@ private:
 
 class Window : public CWindowImpl<Window, CWindow, WindowTraits> {
 public:
-  Window();
+  Window() = default;
   ~Window();
   Window(const Window &) = delete;
   Window &operator=(const Window &) = delete;
@@ -121,6 +136,7 @@ public:
   MESSAGE_HANDLER(WM_PAINT, OnPaint)
   MESSAGE_HANDLER(WM_DPICHANGED, OnDpiChanged);
   MESSAGE_HANDLER(WM_DROPFILES, OnDropfiles)
+  MESSAGE_HANDLER(WM_CTLCOLORSTATIC, OnColorEdit)
   COMMAND_ID_HANDLER(IDB_IMAGE_FIND_BUTTON, OnDiscover)
   SYSCOMMAND_ID_HANDLER(IDM_COMMAND_ABOUT, OnAbout)
   END_MSG_MAP()
@@ -131,12 +147,28 @@ public:
   LRESULT OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandle);
   LRESULT OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
+  // WM_CTLCOLORSTATIC
+  LRESULT OnColorEdit(UINT nMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
   LRESULT OnDiscover(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
   LRESULT OnAbout(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
 
 protected:
+  HWND CreateSubWindow(DWORD dwStyleEx, LPCWSTR lpClassName,
+                       LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y,
+                       int nWidth, int nHeight, HMENU hMenu) {
+    auto hw = CreateWindowExW(
+        dwStyleEx, lpClassName, lpWindowName, dwStyle, MulDiv(X, dpiX, 96),
+        MulDiv(Y, dpiY, 96), MulDiv(nWidth, dpiX, 96),
+        MulDiv(nHeight, dpiY, 96), m_hWnd, hMenu, HINST_THISCOMPONENT, nullptr);
+    if (hw) {
+      ::SendMessageW(hw, WM_SETFONT, (WPARAM)hFont, TRUE);
+    }
+	if(hw==nullptr){
+		::MessageBoxW(nullptr,L"ss", L"ss", MB_OK);
+	}
+    return hw;
+  }
   HRESULT CreateDeviceIndependentResources();
-  HRESULT Initialize();
   HRESULT CreateDeviceResources();
   void DiscardDeviceResources();
   HRESULT OnRender();
@@ -159,10 +191,13 @@ private:
   ID2D1SolidColorBrush *streaksbrush{nullptr};
   HWND hUri;
   HWND hClick;
+  HWND hCharacteristics{nullptr};
+  HWND hDepends{nullptr};
   HFONT hFont{nullptr};
-  HDPI hdpi;
   AttributesTables tables;
   std::vector<Label> labels;
+  int dpiX;
+  int dpiY;
 };
 
 } // namespace ui

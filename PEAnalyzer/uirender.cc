@@ -21,14 +21,7 @@ HRESULT Window::CreateDeviceIndependentResources() {
       DWRITE_FONT_STRETCH_NORMAL, 12.0f * 96.0f / 72.0f, L"zh-CN",
       (IDWriteTextFormat **)&wfmt);
 }
-HRESULT Window::Initialize() {
-  auto hr = CreateDeviceIndependentResources();
-  if (!SUCCEEDED(hr)) {
-    /// --
-    return hr;
-  }
-  return S_OK;
-}
+
 HRESULT Window::CreateDeviceResources() {
   if (render != nullptr) {
     return S_OK;
@@ -98,6 +91,36 @@ void Window::AttributesTablesDraw() {
   if (tables.Empty()) {
     return; ///
   }
+  ////////// -->
+  float offset = 80;
+  float w1 = 30;
+  float w2 = 60;
+  float keyoff = 180;
+  float xoff = 60;
+  for (const auto &e : tables.ats) {
+    render->DrawTextW(e.name.c_str(), (UINT32)e.name.size(), wfmt,
+                      D2D1::RectF(xoff, offset, keyoff, offset + w1), textbrush,
+                      D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+                      DWRITE_MEASURING_MODE_NATURAL);
+    render->DrawTextW(
+        e.value.c_str(), (UINT32)e.value.size(), wfmt,
+        D2D1::RectF(keyoff + 10, offset, keyoff + 400, offset + w1), textbrush,
+        D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+        DWRITE_MEASURING_MODE_NATURAL);
+    offset += w1;
+  }
+  if (!tables.HasDepends()) {
+    return;
+  }
+  render->DrawTextW(tables.Characteristics().Name(),
+                    (UINT32)tables.Characteristics().NameLength(), wfmt,
+                    D2D1::RectF(xoff, offset, keyoff, offset + w2), textbrush,
+                    D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+                    DWRITE_MEASURING_MODE_NATURAL);
+  render->DrawTextW(
+      tables.Depends().Name(), (UINT32)tables.Depends().NameLength(), wfmt,
+      D2D1::RectF(xoff, offset + w2, keyoff, offset + w2 + w2), textbrush,
+      D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT, DWRITE_MEASURING_MODE_NATURAL);
 }
 
 } // namespace ui

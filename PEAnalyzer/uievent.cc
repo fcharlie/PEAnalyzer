@@ -6,11 +6,6 @@
 #include "version.h"
 #include <shellapi.h>
 
-#ifndef HINST_THISCOMPONENT
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-#define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
-#endif
-
 namespace ui {
 
 static inline int Year() {
@@ -35,7 +30,7 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   std::wstring s(L"\xD83D\xDE0B \x2764 Copyright \x0A9 ");
   base::Integer_append_chars(Year(), 10, s);
   s.append(L". Force Charlie. All Rights Reserved.");
-  labels.emplace_back(s, 60, 380, 600, 400);
+  labels.emplace_back(s, 60, 400, 600, 420);
 
   // Create Controls
   hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -43,10 +38,11 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   GetObjectW(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
   hFont = nullptr;
-  logFont.lfHeight = hdpi.Scale(19);
+  logFont.lfHeight = -MulDiv(14, dpiY, 96);
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
+
   HMENU hSystemMenu = ::GetSystemMenu(m_hWnd, FALSE);
   InsertMenuW(hSystemMenu, SC_CLOSE, MF_ENABLED, IDM_COMMAND_ABOUT,
               L"About PE Analyzer\tAlt+F1");
@@ -59,16 +55,11 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              WS_EX_RIGHTSCROLLBAR | WS_EX_NOPARENTNOTIFY;
   constexpr const auto bs =
       BS_PUSHBUTTON | BS_TEXT | WS_CHILD | WS_OVERLAPPED | WS_VISIBLE;
-  hUri = ::CreateWindowExW(eex, WC_EDITW, L"", es, hdpi.Scale(60),
-                           hdpi.Scale(40), hdpi.Scale(510), hdpi.Scale(27),
-                           m_hWnd, HMENU(IDC_IMAGE_URI_EDIT),
-                           HINST_THISCOMPONENT, nullptr);
-  hClick = ::CreateWindowExW(bex, WC_BUTTONW, L"...", bs, hdpi.Scale(575),
-                             hdpi.Scale(40), hdpi.Scale(60), hdpi.Scale(27),
-                             m_hWnd, HMENU(IDB_IMAGE_FIND_BUTTON),
-                             HINST_THISCOMPONENT, nullptr);
-  ::SendMessageW(hUri, WM_SETFONT, (WPARAM)hFont, TRUE);
-  ::SendMessageW(hClick, WM_SETFONT, (WPARAM)hFont, TRUE);
+  hUri = CreateSubWindow(eex, WC_EDITW, L"", es, 60, 40, 510, 27,
+                         HMENU(IDC_IMAGE_URI_EDIT));
+  hClick = CreateSubWindow(bex, WC_BUTTONW, L"...", bs, 575, 40, 65, 27,
+                           HMENU(IDB_IMAGE_FIND_BUTTON));
+
   return S_OK;
 }
 LRESULT Window::OnDestroy(UINT nMsg, WPARAM wParam, LPARAM lParam,
@@ -99,48 +90,52 @@ LRESULT Window::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
 }
 LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              BOOL &bHandle) {
-  HMONITOR hMonitor;
-  POINT pt;
-  UINT dpix = 0, dpiy = 0;
-  HRESULT hr = E_FAIL;
-
-  // Get the DPI for the main monitor, and set the scaling factor
-  pt.x = 1;
-  pt.y = 1;
-  hMonitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
-  hr = GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy);
-
-  if (hr != S_OK) {
-    ::MessageBox(NULL, (LPCWSTR)L"GetDpiForMonitor failed",
-                 (LPCWSTR)L"Notification", MB_OK);
-    return FALSE;
-  }
-  hdpi.SetScale(dpix);
+  /// GET new dpi
+  FLOAT dpiX_, dpiY_;
+  // SEE:
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/dd371319(v=vs.85).aspx
+  factory->ReloadSystemMetrics();
+  factory->GetDesktopDpi(&dpiX_, &dpiY_);
+  dpiX = static_cast<int>(dpiX_);
+  dpiY = static_cast<int>(dpiY_);
   RECT *const prcNewWindow = (RECT *)lParam;
+
   ::SetWindowPos(m_hWnd, NULL, prcNewWindow->left, prcNewWindow->top,
-                 hdpi.Scale(prcNewWindow->right - prcNewWindow->left),
-                 hdpi.Scale(prcNewWindow->bottom - prcNewWindow->top),
+                 MulDiv(prcNewWindow->right - prcNewWindow->left, dpiX, 96),
+                 MulDiv(prcNewWindow->bottom - prcNewWindow->top, dpiY, 96),
                  SWP_NOZORDER | SWP_NOACTIVATE);
   LOGFONTW logFont = {0};
   GetObjectW(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
   hFont = nullptr;
-  logFont.lfHeight = hdpi.Scale(19);
+  logFont.lfHeight = -MulDiv(14, dpiY, 96);
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
-  auto adjustui = [&](HWND hElement) {
+  auto UpdateWindowPos = [&](HWND hWnd) {
     RECT rect;
-    ::GetClientRect(hElement, &rect);
-    ::SetWindowPos(hElement, NULL, hdpi.Scale(rect.left), hdpi.Scale(rect.top),
-                   hdpi.Scale(rect.right - rect.left),
-                   hdpi.Scale(rect.bottom - rect.top),
+    ::GetClientRect(hWnd, &rect);
+    ::SetWindowPos(hWnd, NULL, MulDiv(rect.left, dpiX, 96),
+                   MulDiv(rect.top, dpiY, 96),
+                   MulDiv(rect.right - rect.left, dpiX, 96),
+                   MulDiv(rect.bottom - rect.top, dpiY, 96),
                    SWP_NOZORDER | SWP_NOACTIVATE);
-    ::SendMessageW(hElement, WM_SETFONT, (WPARAM)hFont, lParam);
+    ::SendMessageW(hWnd, WM_SETFONT, (WPARAM)hFont, lParam);
   };
-  adjustui(hUri);
-  adjustui(hClick);
+  UpdateWindowPos(hUri);
+  UpdateWindowPos(hClick);
+  if (hCharacteristics != nullptr) {
+    UpdateWindowPos(hCharacteristics);
+  }
+  if (hDepends != nullptr) {
+    UpdateWindowPos(hDepends);
+  }
   return S_OK;
+}
+
+LRESULT Window::OnColorEdit(UINT nMsg, WPARAM wParam, LPARAM lParam,
+                            BOOL &bHandled) {
+  return (INT_PTR)CreateSolidBrush(RGB(255, 255, 255));
 }
 
 LRESULT Window::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
@@ -159,7 +154,6 @@ LRESULT Window::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
     return S_OK;
   }
   ResolveLink(files[0]);
-  ::InvalidateRect(m_hWnd, NULL, TRUE);
   return S_OK;
 }
 
@@ -180,7 +174,18 @@ LRESULT Window::OnAbout(WORD wNotifyCode, WORD wID, HWND hWndCtl,
 
 LRESULT Window::OnDiscover(WORD wNotifyCode, WORD wID, HWND hWndCtl,
                            BOOL &bHandled) {
-  //
+  const peaz::filter_t filters[] = {
+      {L"Windows  Execute File (*.exe;*.com;*.dll;*.sys)",
+       L"*.exe;*.com;*.dll;*.sys"},
+      {L"Windows Other File (*.scr;*.fon;*.drv)", L"*.scr;*.fon;*.drv"},
+      {L"All Files (*.*)", L"*.*"}};
+  auto file = peaz::PeazFilePicker(m_hWnd, L"Select PE File", filters,
+                                   ArrayLength(filters));
+  if (!file) {
+    tables.Clear();
+    return S_OK;
+  }
+  ResolveLink(*file);
   return S_OK;
 }
 

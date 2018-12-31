@@ -30,10 +30,12 @@ std::optional<std::wstring> ResolveSlink(std::wstring_view sv) {
     return std::nullopt;
   }
   WCHAR szPath[MAX_PATH];
+  WCHAR szFullPath[MAX_PATH];
   WIN32_FIND_DATA wfd;
   if (link->GetPath(szPath, MAX_PATH, (WIN32_FIND_DATA *)&wfd,
                     SLGP_SHORTPATH) == S_OK) {
-    return std::make_optional<std::wstring>(szPath);
+    GetLongPathNameW(szPath, szFullPath, ARRAYSIZE(szFullPath));
+    return std::make_optional<std::wstring>(szFullPath);
   }
   return std::nullopt;
 }

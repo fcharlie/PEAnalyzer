@@ -11,11 +11,6 @@
 
 namespace ui {
 
-Window::Window() {
-  // set hdpi
-  hdpi.SetAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-}
-
 Window::~Window() {
   // Release all resources
   Release(&wfmt);
@@ -41,38 +36,28 @@ constexpr const wchar_t *build_arch() {
 
 //
 bool Window::InitializeWindow() {
-  HMONITOR hMonitor;
-  POINT pt;
-  UINT dpix = 0, dpiy = 0;
-  HRESULT hr = E_FAIL;
-
-  // Get the DPI for the main monitor, and set the scaling factor
-  pt.x = 1;
-  pt.y = 1;
-  hMonitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
-  if (GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy) != S_OK) {
-    auto ec = base::make_system_error_code();
-    peaz::PeazMessageBox(nullptr, L"GetDpiForMonitor error", ec.message.c_str(),
-                         nullptr, peaz::kFatalWindow);
+  if (CreateDeviceIndependentResources() < 0) {
     return false;
   }
-  hdpi.SetScale(dpix);
-  RECT layout = {hdpi.Scale(100), hdpi.Scale(100), hdpi.Scale(800),
-                 hdpi.Scale(600)};
+  FLOAT dpiX_, dpiY_;
+  factory->GetDesktopDpi(&dpiX_, &dpiY_);
+  dpiX = static_cast<int>(dpiX_);
+  dpiY = static_cast<int>(dpiY_);
+  RECT layout = {CW_USEDEFAULT, CW_USEDEFAULT,
+                 CW_USEDEFAULT + MulDiv(720, dpiX, 96),
+                 CW_USEDEFAULT + MulDiv(500, dpiY, 96)};
   const auto noresizewindow =
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
   std::wstring title(L"PE \x2764 Analyzer (");
   title.append(build_arch()).append(L")");
   Create(nullptr, layout, title.c_str(), noresizewindow,
          WS_EX_APPWINDOW | WS_EX_WINDOWEDGE);
-  if (Initialize() < 0) {
-    return false;
-  }
   int numArgc = 0;
   auto Argv = ::CommandLineToArgvW(GetCommandLineW(), &numArgc);
   if (Argv) {
     if (numArgc >= 2 && PathFileExistsW(Argv[1])) {
       /// ---> todo set value
+      ResolveLink(Argv[1]);
     }
     LocalFree(Argv);
   }
@@ -80,6 +65,10 @@ bool Window::InitializeWindow() {
 }
 
 bool Window::ResolveLink(std::wstring file) {
+  tables.Clear();
+  Destroy(&hCharacteristics);
+  Destroy(&hDepends);
+  ::InvalidateRect(m_hWnd, NULL, TRUE);
   if (file.empty()) {
     return false;
   }
@@ -91,7 +80,9 @@ bool Window::ResolveLink(std::wstring file) {
     return false;
   }
   ::SetWindowTextW(hUri, link ? link->c_str() : file.c_str());
-  return Inquisitive();
+  auto ret = Inquisitive();
+  ::InvalidateRect(m_hWnd, NULL, TRUE);
+  return ret;
 }
 
 inline std::wstring Content(HWND hWnd) {
@@ -105,9 +96,19 @@ inline std::wstring Content(HWND hWnd) {
   return s;
 }
 
+inline std::wstring flatvector(const std::vector<std::wstring> &v) {
+  std::wstring s;
+  for (auto &i : v) {
+    s.append(i).append(L", ");
+  }
+  if (!s.empty()) {
+    s.resize(s.size() - 2);
+  }
+  return s;
+}
+
 bool Window::Inquisitive() {
   //
-  tables.Clear();
   auto path = Content(hUri);
   base::error_code ec;
   auto em = pecoff::inquisitive_pecoff(path, ec);
@@ -119,19 +120,28 @@ bool Window::Inquisitive() {
   if (!em) {
     return false;
   }
-  peaz::PeazMessageBox(m_hWnd, L"Inquisitive PE", em->dump().c_str(), nullptr,
-                       peaz::kInfoWindow);
+  //::MessageBoxW(m_hWnd, em->dump().c_str(), L"Inquisitive PE", MB_OK);
   tables.Append(L"Machine:", em->machine);
   tables.Append(L"Subsystem:", em->subsystem);
   tables.Append(L"OS Version:", em->osver.strversion());
   tables.Append(L"Link Version:", em->linkver.strversion());
   if (!em->clrmsg.empty()) {
-    tables.Append(L"CLR Version:", em->clrmsg);
+    tables.Append(L"CLR Details:", em->clrmsg);
   }
   tables.Append(L"Characteristics:", em->characteristics);
   if (!em->depends.empty()) {
     tables.Append(L"Depends:", em->depends);
   }
+  auto y = 80 + 30 * tables.ats.size();
+  constexpr auto es = WS_CHILDWINDOW | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
+                      ES_LEFT | ES_AUTOVSCROLL | ES_MULTILINE | ES_READONLY;
+  constexpr auto exs = WS_EX_LEFT | WS_EX_LTRREADING | WS_EX_RIGHTSCROLLBAR |
+                       WS_EX_NOPARENTNOTIFY;
+  hCharacteristics =
+      CreateSubWindow(exs, WC_EDITW, flatvector(em->characteristics).c_str(),
+                      es, 180, y, 460, 55, nullptr);
+  hDepends = CreateSubWindow(exs, WC_EDITW, flatvector(em->depends).c_str(), es,
+                             180, y + 60, 460, 80, nullptr);
   return true;
 }
 

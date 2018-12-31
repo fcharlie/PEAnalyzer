@@ -39,9 +39,6 @@
     <ClInclude Include="ui.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hdpi.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="errorcode.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
