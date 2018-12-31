@@ -180,7 +180,7 @@ LRESULT Window::OnDiscover(WORD wNotifyCode, WORD wID, HWND hWndCtl,
       {L"Windows Other File (*.scr;*.fon;*.drv)", L"*.scr;*.fon;*.drv"},
       {L"All Files (*.*)", L"*.*"}};
   auto file = peaz::PeazFilePicker(m_hWnd, L"Select PE File", filters,
-                                   ArrayLength(filters));
+                                   (uint32_t)ArrayLength(filters));
   if (!file) {
     tables.Clear();
     return S_OK;

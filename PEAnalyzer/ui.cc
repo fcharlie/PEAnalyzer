@@ -140,9 +140,9 @@ bool Window::Inquisitive() {
                        WS_EX_NOPARENTNOTIFY;
   hCharacteristics =
       CreateSubWindow(exs, WC_EDITW, flatvector(em->characteristics).c_str(),
-                      es, 180, y, 460, 55, nullptr);
+                      es, 185, (int)y, 460, 55, nullptr);
   hDepends = CreateSubWindow(exs, WC_EDITW, flatvector(em->depends).c_str(), es,
-                             180, y + 60, 460, 80, nullptr);
+                             185,(int) y + 60, 460, 80, nullptr);
   return true;
 }
 

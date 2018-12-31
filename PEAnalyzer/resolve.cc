@@ -10,11 +10,12 @@
 
 namespace resolve {
 std::wstring fromascii(std::string_view sv) {
-  auto sz = MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), nullptr, 0);
+  auto sz =
+      MultiByteToWideChar(CP_ACP, 0, sv.data(), (int)sv.size(), nullptr, 0);
   std::wstring output;
   output.resize(sz);
   // C++17 must output.data()
-  MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), output.data(), sz);
+  MultiByteToWideChar(CP_ACP, 0, sv.data(), (int)sv.size(), output.data(), sz);
   return output;
 }
 std::wstring ResolveAscii(pecoff::memview mv) {
@@ -62,11 +63,10 @@ std::optional<std::wstring> ResolveShLink(std::wstring_view sv) {
   //} GUID;
   /// uuid {00021401-0000-0000-C000-000000000046} layout is LE
   constexpr uint8_t shuuid[] = {0x1,  0x14, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0,
-                                0xc0, 0x0,  0x0,  0x0, 0x0, 0x0, 0x0, 0x46};
-  if (x->dwSize != 0x0000004C ||
-      (x->linkflags & shl::HasLinkTargetIDList) == 0 ||
+                                0xc0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x46};
+  if (x->dwSize != 0x0000004C || (x->linkflags & shl::HasLinkInfo) == 0 ||
       !ArrayEqual(shuuid, x->uuid)) {
-    MessageBoxW(nullptr, L"ss", L"NNNNO", MB_OK);
+    /// we only support lnk HasLinkInfo
     return std::nullopt;
   }
   auto pidlist = mv.cast<uint16_t>(x->dwSize);

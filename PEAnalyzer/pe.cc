@@ -210,19 +210,21 @@ std::wstring Subsystem(uint32_t index) {
 }
 
 std::wstring fromutf8(std::string_view sv) {
-  auto sz = MultiByteToWideChar(CP_UTF8, 0, sv.data(), sv.size(), nullptr, 0);
+  auto sz =
+      MultiByteToWideChar(CP_UTF8, 0, sv.data(), (int)sv.size(), nullptr, 0);
   std::wstring output;
   output.resize(sz);
   // C++17 string::data() has non const function
-  MultiByteToWideChar(CP_UTF8, 0, sv.data(), sv.size(), output.data(), sz);
+  MultiByteToWideChar(CP_UTF8, 0, sv.data(), (int)sv.size(), output.data(), sz);
   return output;
 }
 
 std::wstring fromascii(std::string_view sv) {
-  auto sz = MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), nullptr, 0);
+  auto sz =
+      MultiByteToWideChar(CP_ACP, 0, sv.data(), (int)sv.size(), nullptr, 0);
   std::wstring output;
   output.resize(sz);
-  MultiByteToWideChar(CP_ACP, 0, sv.data(), sv.size(), output.data(), sz);
+  MultiByteToWideChar(CP_ACP, 0, sv.data(), (int)sv.size(), output.data(), sz);
   return output;
 }
 
