@@ -97,13 +97,14 @@ inline std::wstring Content(HWND hWnd) {
   return s;
 }
 
-inline std::wstring flatvector(const std::vector<std::wstring> &v) {
+inline std::wstring flatvector(const std::vector<std::wstring> &v,
+                               std::wstring_view delimiter = L", ") {
   std::wstring s;
   for (auto &i : v) {
-    s.append(i).append(L", ");
+    s.append(i).append(delimiter);
   }
   if (!s.empty()) {
-    s.resize(s.size() - 2);
+    s.resize(s.size() - delimiter.size());
   }
   return s;
 }
@@ -141,8 +142,9 @@ bool Window::Inquisitive() {
   hCharacteristics =
       CreateSubWindow(exs, WC_EDITW, flatvector(em->characteristics).c_str(),
                       es, 185, (int)y, 460, 55, nullptr);
-  hDepends = CreateSubWindow(exs, WC_EDITW, flatvector(em->depends).c_str(), es,
-                             185,(int) y + 60, 460, 80, nullptr);
+  hDepends =
+      CreateSubWindow(exs, WC_EDITW, flatvector(em->depends, L"\r\n").c_str(), es,
+                      185, (int)y + 60, 460, 80, nullptr);
   return true;
 }
 
