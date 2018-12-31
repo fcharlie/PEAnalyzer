@@ -41,11 +41,14 @@ std::optional<std::wstring> ResolveSlink(std::wstring_view sv) {
 std::optional<std::wstring> ResolveLink(std::wstring_view sv,
                                         base::error_code &ec) {
   auto shv = ResolveSlink(sv);
+  std::wstring sfile(sv);
+  if (shv) {
+    sfile = *shv;
+  }
   auto hFile = CreateFileW(
-      shv ? shv->c_str() : sv.data(), 0,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-      nullptr);
+      sfile.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
   if (hFile == INVALID_HANDLE_VALUE) {
     ec = base::make_system_error_code();
     return std::nullopt;
@@ -55,9 +58,8 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
   if (DeviceIoControl(hFile, FSCTL_GET_REPARSE_POINT, nullptr, 0, buffer,
                       MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &dwBytes,
                       nullptr) != TRUE) {
-    ec = base::make_system_error_code();
     CloseHandle(hFile);
-    return std::nullopt;
+    return std::make_optional<std::wstring>(sfile);
   }
   CloseHandle(hFile);
 
@@ -133,6 +135,6 @@ std::optional<std::wstring> ResolveLink(std::wstring_view sv,
   default:
     break;
   }
-  return std::nullopt;
+  return std::make_optional<std::wstring>(sfile);
 }
 } // namespace resolve

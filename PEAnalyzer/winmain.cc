@@ -6,9 +6,10 @@
 #include <Objbase.h>
 #include <VersionHelpers.h>
 #include <commdlg.h>
+#include "errorcode.hpp"
 ///
 #include "peazres.h"
-#include "window.hpp"
+#include "ui.hpp"
 
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "ComDlg32.Lib")
@@ -16,38 +17,43 @@
 #pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "shcore.lib")
 
-class DotComInitialize {
+class COMInitializer {
 public:
-  DotComInitialize() { CoInitialize(NULL); }
-  ~DotComInitialize() { CoUninitialize(); }
+  COMInitializer() { CoInitialize(nullptr); }
+  ~COMInitializer() { CoUninitialize(); }
 };
 
-int MetroWindowRunLoop() {
+int WindowMessageLoop() {
   INITCOMMONCONTROLSEX info = {sizeof(INITCOMMONCONTROLSEX),
                                ICC_TREEVIEW_CLASSES | ICC_COOL_CLASSES |
                                    ICC_LISTVIEW_CLASSES};
   InitCommonControlsEx(&info);
-  MetroWindow window;
-  MSG msg;
-  window.InitializeWindow();
+  ui::Window window;
+  if (!window.InitializeWindow()) {
+    auto ec = base::make_system_error_code();
+    MessageBoxW(nullptr, L"InitializeWindow.", ec.message.c_str(),
+                MB_OK | MB_ICONERROR);
+    return 1;
+  }
+
   window.ShowWindow(SW_SHOW);
   window.UpdateWindow();
-
-  while (GetMessage(&msg, nullptr, 0, 0) > 0) {
+  MSG msg;
+  while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
     TranslateMessage(&msg);
-    DispatchMessage(&msg);
+    DispatchMessageW(&msg);
   }
   return 0;
 }
 
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
                     _In_ LPWSTR lpCmdLine, _In_ int nCmdShow) {
-  if (!IsWindows7SP1OrGreater()) {
+  if (!IsWindows10OrGreater()) {
     MessageBoxW(nullptr, L"You need at least Windows 10.",
                 L"Version Not Supported", MB_OK | MB_ICONERROR);
     return -1;
   }
-  DotComInitialize dot;
+  COMInitializer comer; /// RAII com init
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
-  return MetroWindowRunLoop();
+  return WindowMessageLoop();
 }

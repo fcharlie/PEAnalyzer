@@ -27,6 +27,18 @@ Window::~Window() {
   }
 }
 
+constexpr const wchar_t *build_arch() {
+#if defined(_M_ARM64)
+  return L"ARM64";
+#elif defined(_M_X64)
+  return L"AMD64";
+#elif defined(_M_ARM)
+  return L"ARM";
+#else
+  return L"Win32";
+#endif
+}
+
 //
 bool Window::InitializeWindow() {
   HMONITOR hMonitor;
@@ -49,8 +61,13 @@ bool Window::InitializeWindow() {
                  hdpi.Scale(600)};
   const auto noresizewindow =
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-  Create(nullptr, layout, L"", noresizewindow,
+  std::wstring title(L"PE \x2764 Analyzer (");
+  title.append(build_arch()).append(L")");
+  Create(nullptr, layout, title.c_str(), noresizewindow,
          WS_EX_APPWINDOW | WS_EX_WINDOWEDGE);
+  if (Initialize() < 0) {
+    return false;
+  }
   int numArgc = 0;
   auto Argv = ::CommandLineToArgvW(GetCommandLineW(), &numArgc);
   if (Argv) {
@@ -73,9 +90,7 @@ bool Window::ResolveLink(std::wstring file) {
                          peaz::kFatalWindow);
     return false;
   }
-  if (link) {
-    ::SetWindowTextW(hUri, link->c_str());
-  }
+  ::SetWindowTextW(hUri, link ? link->c_str() : file.c_str());
   return Inquisitive();
 }
 
@@ -104,6 +119,8 @@ bool Window::Inquisitive() {
   if (!em) {
     return false;
   }
+  peaz::PeazMessageBox(m_hWnd, L"Inquisitive PE", em->dump().c_str(), nullptr,
+                       peaz::kInfoWindow);
   tables.Append(L"Machine:", em->machine);
   tables.Append(L"Subsystem:", em->subsystem);
   tables.Append(L"OS Version:", em->osver.strversion());

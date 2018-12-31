@@ -25,6 +25,7 @@ HRESULT Window::Initialize() {
   auto hr = CreateDeviceIndependentResources();
   if (!SUCCEEDED(hr)) {
     /// --
+    return hr;
   }
   return S_OK;
 }
@@ -75,7 +76,7 @@ void Window::OnResize(UINT width, UINT height) {
 
 HRESULT Window::OnRender() {
   auto hr = CreateDeviceResources();
-  if (SUCCEEDED(hr)) {
+  if (!SUCCEEDED(hr)) {
     return hr;
   }
   auto dsz = render->GetSize();

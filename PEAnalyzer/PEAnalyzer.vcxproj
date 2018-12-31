@@ -154,8 +154,6 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="ui.hpp" />
     <ClInclude Include="version.h" />
-    <ClInclude Include="window.hpp" />
-    <ClInclude Include="PortableExecutableFile.h" />
     <ClInclude Include="reparserpoint.hpp" />
     <ClInclude Include="resolve.hpp" />
     <ClInclude Include="peazres.h" />
@@ -167,9 +165,7 @@
     <ClCompile Include="uievent.cc" />
     <ClCompile Include="uirender.cc" />
     <ClCompile Include="winmain.cc" />
-    <ClCompile Include="window.cc" />
     <ClCompile Include="peazutils.cc" />
-    <ClCompile Include="PortableExecutableFile.cpp" />
     <ClCompile Include="resolve.cc" />
   </ItemGroup>
   <ItemGroup>
