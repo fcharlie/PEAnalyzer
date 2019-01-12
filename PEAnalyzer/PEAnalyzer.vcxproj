@@ -148,6 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="charconv.hpp" />
+    <ClInclude Include="endian.hpp" />
     <ClInclude Include="errorcode.hpp" />
     <ClInclude Include="pe.hpp" />
     <ClInclude Include="shl.hpp" />

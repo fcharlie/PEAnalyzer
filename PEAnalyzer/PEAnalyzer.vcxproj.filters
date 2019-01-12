@@ -48,6 +48,9 @@
     <ClInclude Include="shl.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="endian.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pe.cc">
