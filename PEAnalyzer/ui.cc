@@ -47,7 +47,7 @@ bool Window::InitializeWindow() {
                  CW_USEDEFAULT + MulDiv(720, dpiX, 96),
                  CW_USEDEFAULT + MulDiv(500, dpiY, 96)};
   const auto noresizewindow =
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN | WS_MINIMIZEBOX;
   std::wstring title(L"PE \x2764 Analyzer (");
   title.append(build_arch()).append(L")");
   Create(nullptr, layout, title.c_str(), noresizewindow,
