@@ -47,6 +47,7 @@ HRESULT Window::CreateDeviceResources() {
 }
 void Window::DiscardDeviceResources() {
   //
+  Release(&render);
   Release(&textbrush);
   Release(&streaksbrush);
 }
@@ -82,8 +83,12 @@ HRESULT Window::OnRender() {
                       D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
                       DWRITE_MEASURING_MODE_NATURAL);
   }
-  render->EndDraw();
-  return S_OK;
+  hr = render->EndDraw();
+  if (hr == D2DERR_RECREATE_TARGET) {
+    hr = S_OK;
+    DiscardDeviceResources();
+  }
+  return hr;
 }
 
 void Window::AttributesTablesDraw() {
