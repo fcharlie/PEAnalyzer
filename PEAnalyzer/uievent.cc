@@ -90,7 +90,7 @@ LRESULT Window::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
 }
 LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              BOOL &bHandle) {
-  dpiX = static_cast<UINT32>(wParam);
+  dpiX = LOWORD(wParam);
   RECT *const prcNewWindow = (RECT *)lParam;
 
   ::SetWindowPos(m_hWnd, NULL, prcNewWindow->left, prcNewWindow->top,
