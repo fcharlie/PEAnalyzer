@@ -38,7 +38,7 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   GetObjectW(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
   hFont = nullptr;
-  logFont.lfHeight = -MulDiv(14, dpiY, 96);
+  logFont.lfHeight = -MulDiv(14, dpiX, 96);
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
@@ -90,25 +90,18 @@ LRESULT Window::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
 }
 LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              BOOL &bHandle) {
-  /// GET new dpi
-  FLOAT dpiX_, dpiY_;
-  // SEE:
-  // https://msdn.microsoft.com/en-us/library/windows/desktop/dd371319(v=vs.85).aspx
-  factory->ReloadSystemMetrics();
-  factory->GetDesktopDpi(&dpiX_, &dpiY_);
-  dpiX = static_cast<int>(dpiX_);
-  dpiY = static_cast<int>(dpiY_);
+  dpiX = static_cast<UINT32>(wParam);
   RECT *const prcNewWindow = (RECT *)lParam;
 
   ::SetWindowPos(m_hWnd, NULL, prcNewWindow->left, prcNewWindow->top,
                  MulDiv(prcNewWindow->right - prcNewWindow->left, dpiX, 96),
-                 MulDiv(prcNewWindow->bottom - prcNewWindow->top, dpiY, 96),
+                 MulDiv(prcNewWindow->bottom - prcNewWindow->top, dpiX, 96),
                  SWP_NOZORDER | SWP_NOACTIVATE);
   LOGFONTW logFont = {0};
   GetObjectW(hFont, sizeof(logFont), &logFont);
   DeleteObject(hFont);
   hFont = nullptr;
-  logFont.lfHeight = -MulDiv(14, dpiY, 96);
+  logFont.lfHeight = -MulDiv(14, dpiX, 96);
   logFont.lfWeight = FW_NORMAL;
   wcscpy_s(logFont.lfFaceName, L"Segoe UI");
   hFont = CreateFontIndirectW(&logFont);
@@ -116,9 +109,9 @@ LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
     RECT rect;
     ::GetClientRect(hWnd, &rect);
     ::SetWindowPos(hWnd, NULL, MulDiv(rect.left, dpiX, 96),
-                   MulDiv(rect.top, dpiY, 96),
+                   MulDiv(rect.top, dpiX, 96),
                    MulDiv(rect.right - rect.left, dpiX, 96),
-                   MulDiv(rect.bottom - rect.top, dpiY, 96),
+                   MulDiv(rect.bottom - rect.top, dpiX, 96),
                    SWP_NOZORDER | SWP_NOACTIVATE);
     ::SendMessageW(hWnd, WM_SETFONT, (WPARAM)hFont, lParam);
   };

@@ -159,8 +159,8 @@ protected:
                        int nWidth, int nHeight, HMENU hMenu) {
     auto hw = CreateWindowExW(
         dwStyleEx, lpClassName, lpWindowName, dwStyle, MulDiv(X, dpiX, 96),
-        MulDiv(Y, dpiY, 96), MulDiv(nWidth, dpiX, 96),
-        MulDiv(nHeight, dpiY, 96), m_hWnd, hMenu, HINST_THISCOMPONENT, nullptr);
+        MulDiv(Y, dpiX, 96), MulDiv(nWidth, dpiX, 96),
+        MulDiv(nHeight, dpiX, 96), m_hWnd, hMenu, HINST_THISCOMPONENT, nullptr);
     if (hw) {
       ::SendMessageW(hw, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
@@ -199,7 +199,6 @@ private:
   AttributesTables tables;
   std::vector<Label> labels;
   int dpiX;
-  int dpiY;
 };
 
 } // namespace ui

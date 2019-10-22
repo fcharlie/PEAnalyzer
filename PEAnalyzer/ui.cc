@@ -39,13 +39,10 @@ bool Window::InitializeWindow() {
   if (CreateDeviceIndependentResources() < 0) {
     return false;
   }
-  FLOAT dpiX_, dpiY_;
-  factory->GetDesktopDpi(&dpiX_, &dpiY_);
-  dpiX = static_cast<int>(dpiX_);
-  dpiY = static_cast<int>(dpiY_);
+  dpiX = ::GetSystemDpiForProcess(GetCurrentProcess());
   RECT layout = {CW_USEDEFAULT, CW_USEDEFAULT,
                  CW_USEDEFAULT + MulDiv(720, dpiX, 96),
-                 CW_USEDEFAULT + MulDiv(500, dpiY, 96)};
+                 CW_USEDEFAULT + MulDiv(500, dpiX, 96)};
   const auto noresizewindow =
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN | WS_MINIMIZEBOX;
   std::wstring title(L"PE \x2764 Analyzer (");
