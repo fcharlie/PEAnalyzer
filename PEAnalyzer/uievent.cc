@@ -133,7 +133,7 @@ LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                    MulDiv(w.layout.right - w.layout.left, dpiX, 96),
                    MulDiv(w.layout.bottom - w.layout.top, dpiY, 96),
                    SWP_NOZORDER | SWP_NOACTIVATE);
-    ::SendMessageW(w.hWnd, WM_SETFONT, (WPARAM)hFont, lParam);
+    ::SendMessageW(w.hWnd, WM_SETFONT, (WPARAM)hFont, TRUE);
   };
   UpdateWindowPos(hUri);
   UpdateWindowPos(hClick);
