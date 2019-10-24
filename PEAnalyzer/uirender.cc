@@ -35,7 +35,7 @@ HRESULT Window::CreateDeviceResources() {
            D2D1::HwndRenderTargetProperties(m_hWnd, size), &render)) < 0) {
     return hr;
   }
-  renderTarget->SetDpi(static_cast<float>(dpiX), static_cast<float>(dpiX));
+  render->SetDpi(static_cast<float>(dpiX), static_cast<float>(dpiX));
   if ((hr = render->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black),
                                           &textbrush)) < 0) {
     return hr;

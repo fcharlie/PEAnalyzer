@@ -40,8 +40,9 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   dpiX = GetDpiForWindow(m_hWnd);
   dpiY = dpiX;
   RECT rect;
-  ::GetClientRect(m_hWnd, &rect);
-  ::SetWindowPos(m_hWnd, nullptr, rect.left, rect.top, MulDiv(720, dpiX, 96),
+  SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+  int cx = rect.right - rect.left;
+  ::SetWindowPos(m_hWnd, nullptr,(cx-720)/2, 100, MulDiv(720, dpiX, 96),
                  MulDiv(500, dpiX, 96), SWP_NOZORDER | SWP_NOACTIVATE);
   UpdateFontWithNewDPI(hFont, dpiX);
 
@@ -115,8 +116,7 @@ LRESULT Window::OnPaint(UINT nMsg, WPARAM wParam, LPARAM lParam,
 LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                              BOOL &bHandle) {
   dpiX = LOWORD(wParam);
-  RECT *const prcNewWindow = (RECT *)lParam;
-
+  dpiY = HIWORD(wParam);
   auto prcNewWindow = reinterpret_cast<RECT *const>(lParam);
   // resize window with new DPI
   ::SetWindowPos(m_hWnd, nullptr, prcNewWindow->left, prcNewWindow->top,
@@ -125,7 +125,7 @@ LRESULT Window::OnDpiChanged(UINT nMsg, WPARAM wParam, LPARAM lParam,
                  SWP_NOZORDER | SWP_NOACTIVATE);
 
   UpdateFontWithNewDPI(hFont, dpiX);
-  renderTarget->SetDpi(static_cast<float>(dpiX), static_cast<float>(dpiX));
+  render->SetDpi(static_cast<float>(dpiX), static_cast<float>(dpiX));
 
   auto UpdateWindowPos = [&](Widget &w) {
     ::SetWindowPos(w.hWnd, NULL, MulDiv(w.layout.left, dpiX, 96),

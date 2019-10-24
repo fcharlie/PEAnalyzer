@@ -76,7 +76,7 @@ bool Window::ResolveLink(std::wstring file) {
                          peaz::kFatalWindow);
     return false;
   }
-  ::SetWindowTextW(hUri, link ? link->c_str() : file.c_str());
+  ::SetWindowTextW(hUri.hWnd, link ? link->c_str() : file.c_str());
   auto ret = Inquisitive();
   ::InvalidateRect(m_hWnd, NULL, TRUE);
   return ret;

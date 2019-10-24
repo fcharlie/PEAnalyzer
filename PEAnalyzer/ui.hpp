@@ -215,6 +215,7 @@ private:
   AttributesTables tables;
   std::vector<Label> labels;
   int dpiX{96};
+  int dpiY{96};
 };
 
 } // namespace ui
