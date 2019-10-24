@@ -61,6 +61,29 @@ struct Label {
   D2D1_RECT_F mlayout;
 };
 
+struct Widget {
+  HWND hWnd{nullptr};
+  RECT layout;
+  void Destroy() {
+    if (hWnd != nullptr) {
+      DestroyWindow(hWnd);
+      hWnd = nullptr;
+    }
+  }
+  bool Alived() const { return hWnd != nullptr; }
+  std::wstring Content() {
+    auto l = GetWindowTextLengthW(hWnd);
+    if (l == 0 || l > 0x8000) {
+      return L"";
+    }
+    std::wstring s;
+    s.resize(l + 1);
+    auto k = GetWindowTextW(hWnd, s.data(), l + 1); //// Null T
+    s.resize(k);
+    return s;
+  }
+};
+
 struct AttributesTables {
   std::vector<AttributesTable> ats;
   std::vector<AttributesMultiTable> amts;
@@ -109,16 +132,6 @@ template <class T> inline void Destroy(T *h) {
   }
 }
 
-// use raii
-class AutoVisible {
-public:
-  AutoVisible(HWND hWnd) : hWnd_(hWnd) { EnableWindow(hWnd_, FALSE); }
-  ~AutoVisible() { EnableWindow(hWnd_, TRUE); }
-
-private:
-  HWND hWnd_;
-};
-
 class Window : public CWindowImpl<Window, CWindow, WindowTraits> {
 public:
   Window() = default;
@@ -154,20 +167,23 @@ public:
   LRESULT OnAbout(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
 
 protected:
-  HWND CreateSubWindow(DWORD dwStyleEx, LPCWSTR lpClassName,
+  bool CreateSubWindow(DWORD dwStyleEx, LPCWSTR lpClassName,
                        LPCWSTR lpWindowName, DWORD dwStyle, int X, int Y,
-                       int nWidth, int nHeight, HMENU hMenu) {
+                       int nWidth, int nHeight, HMENU hMenu, Widget &w) {
     auto hw = CreateWindowExW(
         dwStyleEx, lpClassName, lpWindowName, dwStyle, MulDiv(X, dpiX, 96),
         MulDiv(Y, dpiX, 96), MulDiv(nWidth, dpiX, 96),
         MulDiv(nHeight, dpiX, 96), m_hWnd, hMenu, HINST_THISCOMPONENT, nullptr);
-    if (hw) {
-      ::SendMessageW(hw, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (hw == nullptr) {
+      return false;
     }
-	if(hw==nullptr){
-		::MessageBoxW(nullptr,L"ss", L"ss", MB_OK);
-	}
-    return hw;
+    w.hWnd = hw;
+    w.layout.left = X;
+    w.layout.top = Y;
+    w.layout.right = X + nWidth;
+    w.layout.bottom = Y + nHeight;
+    ::SendMessageW(hw, WM_SETFONT, (WPARAM)hFont, TRUE);
+    return true;
   }
   HRESULT CreateDeviceIndependentResources();
   HRESULT CreateDeviceResources();
@@ -190,15 +206,15 @@ private:
   ID2D1SolidColorBrush *textbrush{nullptr};
   //// AttributesTable streak brush
   ID2D1SolidColorBrush *streaksbrush{nullptr};
-  HWND hUri;
-  HWND hClick;
-  HWND hCharacteristics{nullptr};
-  HWND hDepends{nullptr};
+  Widget hUri;
+  Widget hClick;
+  Widget hCharacteristics;
+  Widget hDepends;
   HFONT hFont{nullptr};
   std::mutex mtx;
   AttributesTables tables;
   std::vector<Label> labels;
-  int dpiX;
+  int dpiX{96};
 };
 
 } // namespace ui

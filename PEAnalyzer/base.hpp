@@ -41,7 +41,6 @@ template <typename T, size_t N> constexpr T *ArrayEnd(T (&aArr)[N]) {
   return aArr + ArrayLength(aArr);
 }
 
-
 /**
  * std::equal has subpar ergonomics.
  */
