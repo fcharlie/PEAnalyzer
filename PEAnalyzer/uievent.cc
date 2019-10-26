@@ -43,7 +43,7 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
   int cx = rect.right - rect.left;
   auto w = MulDiv(720, dpiX, 96);
-  ::SetWindowPos(m_hWnd, nullptr, (cx - w) / 2, 100, w, MulDiv(500, dpiX, 96),
+  ::SetWindowPos(m_hWnd, nullptr, (cx - w) / 2, MulDiv(100, dpiX, 96), w, MulDiv(500, dpiX, 96),
                  SWP_NOZORDER | SWP_NOACTIVATE);
   UpdateFontWithNewDPI(hFont, dpiX);
 
