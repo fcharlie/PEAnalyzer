@@ -77,8 +77,9 @@ struct Widget {
       return L"";
     }
     std::wstring s;
-    s.resize(l + 1);
-    auto k = GetWindowTextW(hWnd, s.data(), l + 1); //// Null T
+    auto N = l + 1;
+    s.resize(N);
+    auto k = GetWindowTextW(hWnd, s.data(), N); //// Null T
     s.resize(k);
     return s;
   }
