@@ -42,8 +42,9 @@ LRESULT Window::OnCreate(UINT nMsg, WPARAM wParam, LPARAM lParam,
   RECT rect;
   SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
   int cx = rect.right - rect.left;
-  ::SetWindowPos(m_hWnd, nullptr,(cx-720)/2, 100, MulDiv(720, dpiX, 96),
-                 MulDiv(500, dpiX, 96), SWP_NOZORDER | SWP_NOACTIVATE);
+  auto w = MulDiv(720, dpiX, 96);
+  ::SetWindowPos(m_hWnd, nullptr, (cx - w) / 2, 100, w, MulDiv(500, dpiX, 96),
+                 SWP_NOZORDER | SWP_NOACTIVATE);
   UpdateFontWithNewDPI(hFont, dpiX);
 
   HICON hIcon =
@@ -153,20 +154,20 @@ LRESULT Window::OnColorEdit(UINT nMsg, WPARAM wParam, LPARAM lParam,
 
 LRESULT Window::OnDropfiles(UINT nMsg, WPARAM wParam, LPARAM lParam,
                             BOOL &bHandled) {
-
   HDROP hDrop = (HDROP)wParam;
   UINT nfilecounts = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
-  wchar_t buffer[8192];
-  std::vector<std::wstring> files;
-  for (UINT i = 0; i < nfilecounts; i++) {
-    DragQueryFileW(hDrop, i, buffer, (UINT)ArrayLength(buffer));
-    files.push_back(buffer);
-  }
-  DragFinish(hDrop);
-  if (files.empty()) {
+  std::wstring buffer;
+  buffer.resize(0x8000);
+  if (nfilecounts == 0) {
+    DragFinish(hDrop);
     return S_OK;
   }
-  ResolveLink(files[0]);
+  auto n = DragQueryFileW(hDrop, 0, buffer.data(), 0x8000);
+  if (n > 0) {
+    buffer.resize(n);
+    ResolveLink(buffer);
+  }
+  DragFinish(hDrop);
   return S_OK;
 }
 
