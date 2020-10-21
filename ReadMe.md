@@ -1,5 +1,7 @@
 # PE ❤ Analyzer
 
+**Deprecated, Please use [BelaUtils: Caelum](https://github.com/fcharlie/BelaUtils/tree/master/tools/caelum)**
+
 On Windows, Executable (image) files are structured according to the Portable Executable (PE) format.  
 
 However, People usually do not know what operating system to run on the PE file directly, 
